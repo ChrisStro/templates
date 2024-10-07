@@ -1,0 +1,32 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: headscale-stun
+  namespace: my-headscale
+  labels:
+    app: headscale-stun
+spec:
+  selector:
+    matchLabels:
+      name: headscale-stun
+  template:
+    metadata:
+      labels:
+        name: headscale-stun
+    spec:
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      hostNetwork: true
+      containers:
+      - name: headscale-coturn
+        image: coturn/coturn:latest
+        resources:
+          limits:
+            cpu: 100m
+            memory: 200Mi
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 10

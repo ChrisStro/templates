@@ -1,0 +1,134 @@
+## seafile-db
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: seafile-db-pvc
+  namespace: my-seafile
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: seafile-db
+  namespace: my-seafile
+  labels:
+    app: seafile-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seafile-db
+  template:
+    metadata:
+      labels:
+        app: seafile-db
+        networking/allow-external-https: "true"
+    spec:
+      containers:
+        - image: mariadb:10.5
+          name: seafile-mysql
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: seafile-db-cm
+            - secretRef:
+                name: seafile-db-secret
+          volumeMounts:
+            - name: seafile-db-storage
+              mountPath: /var/lib/mysql
+      restartPolicy: Always
+      volumes:
+        - name: seafile-db-storage
+          persistentVolumeClaim:
+            claimName: seafile-db-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: seafile-db
+ namespace: my-seafile
+spec:
+  clusterIP: None
+  selector:
+    app: seafile-db
+
+## seafile-app
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: seafile-app-pvc
+  namespace: my-seafile
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: seafile-app
+  namespace: my-seafile
+  labels:
+    app: seafile-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seafile-app
+  template:
+    metadata:
+      labels:
+        app: seafile-app
+    spec:
+      # need login for pro edition
+      imagePullSecrets:
+        - name: seafile-pro-repo
+      containers:
+        - image: docker.seadrive.org/seafileltd/seafile-pro-mc:latest
+          name: seafile
+          ports:
+            - containerPort: 80
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: seafile-app-cm
+            - secretRef:
+                name: seafile-app-secret
+          volumeMounts:
+            - name: seafile-app-storage
+              mountPath: /shared
+        - image: memcached:1.6
+          name: seafile-memcached
+          command: ['memcached','-m','256']
+          resources: {}
+      restartPolicy: Always
+      volumes:
+        - name: seafile-app-storage
+          persistentVolumeClaim:
+            claimName: seafile-app-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: seafile-app
+ namespace: my-seafile
+spec:
+  selector:
+    app: seafile-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

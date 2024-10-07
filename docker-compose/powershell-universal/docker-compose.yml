@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  psuniversal:
+    image: ironmansoftware/universal:3.6.5-ubuntu-20.04
+    container_name: psuniversal
+    restart: unless-stopped
+    # ports:
+    #   - 5000:5000
+    networks:
+      - proxy_network
+    volumes:
+      - psuniversal_data:/home/data
+    environment:
+      - Data__RepositoryPath=/home/data/Repository
+      - Data__ConnectionString=/home/data/database.db
+      - Data__UniversalDashboard__AssetsFolder=/home/data/UniversalDashboard
+      - Logging__Path=/home/data/UniversalDashboard
+      - TZ=Europe/Amsterdam
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.psuniversal.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.psuniversal.tls=true"
+      - "traefik.http.middlewares.psuniversal-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.psuniversal-to-https.redirectscheme.permanent=true"
+      # - "traefik.http.routers.psuniversal.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  psuniversal_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

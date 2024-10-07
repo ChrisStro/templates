@@ -1,0 +1,50 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: TLSOption
+metadata:
+  name: default
+  namespace: my-traefik
+spec:
+  minVersion: VersionTLS13 # whenever possible
+  # minVersion: VersionTLS12
+  cipherSuites:
+  # GRPC uses: ECDHE-ECDSA-AES128_GCM_SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384
+  # ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384 is speceficly mentioned many places
+    - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384   # TLS 1.2
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305    # TLS 1.2
+    - TLS_AES_256_GCM_SHA384                  # TLS 1.3
+    - TLS_CHACHA20_POLY1305_SHA256            # TLS 1.3
+
+    # - TLS_RSA_WITH_RC4_128_SHA              # TLS 1.0 / TLS 1.1 / TLS 1.2 / INSECURE
+    # - TLS_RSA_WITH_3DES_EDE_CBC_SHA         # SWEET32
+    # - TLS_RSA_WITH_AES_128_CBC_SHA          # TLS 1.0 / TLS 1.1 / TLS 1.2 / weak
+    # - TLS_RSA_WITH_AES_256_CBC_SHA          # TLS 1.0 / TLS 1.1 / TLS 1.2 / weak
+    # - TLS_RSA_WITH_AES_128_CBC_SHA256       # TLS 1.0 / TLS 1.1 / TLS 1.2 / weak
+    # - TLS_RSA_WITH_AES_128_GCM_SHA256         # TLS 1.2 / Weak
+    # - TLS_RSA_WITH_AES_256_GCM_SHA384         # TLS 1.2 / Weak
+    # - TLS_ECDHE_ECDSA_WITH_RC4_128_SHA      # weak
+    - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+    - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+    # - TLS_ECDHE_RSA_WITH_RC4_128_SHA         # TLS 1.0 / TLS 1.1 / TLS 1.2 / INSECURE
+    # - TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA    # SWEET32
+    # - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA     # TLS 1.0 / TLS 1.1 / TLS 1.2
+    # - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA     # TLS 1.0 / TLS 1.1 / TLS 1.2
+    - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
+    # - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256  # TLS 1.0 / TLS 1.1 / TLS 1.2 / wwak
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256    # TLS 1.2
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 # TLS 1.2
+    - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+    - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    - TLS_AES_128_GCM_SHA256
+    - TLS_AES_256_GCM_SHA384
+    - TLS_CHACHA20_POLY1305_SHA256
+    - TLS_FALLBACK_SCSV
+
+  # curvePreferences:
+  #   - CurveP521
+  #   - CurveP384
+  alpnProtocols:
+    - http/1.1
+    - h2
+  # sniStrict: true

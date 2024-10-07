@@ -1,0 +1,64 @@
+services:
+  mysql:
+    image: docker.io/library/mysql:8.3
+    container_name: mysql
+    restart: unless-stopped
+    networks:
+      - backend
+    volumes:
+      - mysql:/var/lib/mysql
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_DATABASE=semaphore
+      - MYSQL_USER=semaphore
+      - MYSQL_PASSWORD=$SEMAPHORE_DB_PASS
+
+  semaphore:
+    image: docker.io/semaphoreui/semaphore:latest
+    container_name: ansiblesemaphore
+    restart: unless-stopped
+    user: "${UID}:${GID}"
+    depends_on:
+      - mysql
+    networks:
+      - backend
+      - proxy_network
+    #ports:
+    #  - 3000:3000
+    volumes:
+      - inventory:/inventory:ro
+      - authorized-keys:/authorized-keys:ro
+      - config:/etc/semaphore:rw
+    environment:
+      - SEMAPHORE_DB_USER=semaphore
+      - SEMAPHORE_DB_PASS=$SEMAPHORE_DB_PASS
+      - SEMAPHORE_DB_HOST=mysql
+      - SEMAPHORE_DB_PORT=3306
+      - SEMAPHORE_DB_DIALECT=mysql
+      - SEMAPHORE_DB=semaphore
+      - SEMAPHORE_PLAYBOOK_PATH=/tmp/semaphore/
+      - SEMAPHORE_ADMIN=$SEMAPHORE_ADMIN
+      - SEMAPHORE_ADMIN_PASSWORD=$SEMAPHORE_ADMIN_PASSWORD
+      - SEMAPHORE_ADMIN_NAME=$SEMAPHORE_ADMIN_NAME
+      - SEMAPHORE_ADMIN_EMAIL=$SEMAPHORE_ADMIN_EMAIL
+      # - SEMAPHORE_ACCESS_KEY_ENCRYPTION= # add to your access key encryption !
+      # - ANSIBLE_HOST_KEY_CHECKING=false # (optional) change to true if you want to enable host key checking
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.semaphore.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.semaphore.tls=true"
+      - "traefik.http.services.semaphore.loadbalancer.server.port=3000"
+      # - "traefik.http.services.semaphore.loadbalancer.server.scheme=https"
+
+volumes:
+  mysql:
+  inventory:
+  authorized-keys:
+  config:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

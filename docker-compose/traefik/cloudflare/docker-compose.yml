@@ -1,0 +1,145 @@
+version: '3'
+
+services:
+  init_fileprovider:
+    image: busybox
+    command:
+      - sh
+      - -c
+      - |
+        cat > /fileprovider/config.yml << EOF
+        tls:
+          options:
+            default:
+              minVersion: VersionTLS12
+              cipherSuites:
+              # Recommended ciphers for TLSv1.2
+              - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+              - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+              - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+              # Recommended ciphers for TLSv1.3
+              - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+              - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+              - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+            tlsv13only:
+              minVersion: VersionTLS13
+        EOF
+        echo -e "\n------------final file------------\n"
+        cat /fileprovider/config.yml
+    volumes:
+      - traefik_file:/fileprovider
+
+  traefik:
+    image: "traefik:latest"
+    container_name: "traefik"
+    restart: unless-stopped
+    depends_on:
+      init_fileprovider:
+        condition: service_completed_successfully
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    networks:
+      - proxy_network
+    ports:
+      - "80:80"
+      - "443:443"
+      # (Optional) Expose Dashboard
+      #- "8080:8080"  # Don't do this in production!
+    command:
+      # provider setup docker/file
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false" # Default is true
+      #- "--providers.file.filename=/file_provider.yml" # Default is true
+      #- "--providers.file.watch=true"
+      # Traefik settings
+      - "--log.level=INFO" # level: debug, info, warning, error, critical
+      - "--global.checkNewVersion=true"
+      - "--global.sendAnonymousUsage=false"
+      - "--serversTransport.insecureSkipVerify=true" # when forwarding to selfsigned
+      # Certificate resolver cloudflare
+      - "--certificatesResolvers.cf-staging.acme.email=$CF_API_EMAIL"
+      - "--certificatesResolvers.cf-staging.acme.storage=/cloudflare/acme.json"
+      - "--certificatesResolvers.cf-staging.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory" # default is production
+      - "--certificatesResolvers.cf-staging.acme.dnsChallenge.provider=cloudflare"
+      - "--certificatesResolvers.cf-staging.acme.dnsChallenge.resolvers[0]=1.1.1.1:53"
+      - "--certificatesResolvers.cf-staging.acme.dnsChallenge.resolvers[1]=1.0.0.1:53"
+      - "--certificatesResolvers.cf-production.acme.email=$CF_API_EMAIL"
+      - "--certificatesResolvers.cf-production.acme.storage=/cloudflare/acme.json"
+      - "--certificatesResolvers.cf-production.acme.dnsChallenge.provider=cloudflare"
+      - "--certificatesResolvers.cf-production.acme.dnsChallenge.resolvers[0]=1.1.1.1:53"
+      - "--certificatesResolvers.cf-production.acme.dnsChallenge.resolvers[1]=1.0.0.1:53"
+      # Configure entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certResolver=cf-$CF_STAGING_OR_PRODUCTION"
+      - "--entrypoints.websecure.http.tls.domains[0].main=$DOMAINNAME"
+      - "--entrypoints.websecure.http.tls.domains[0].sans=*.$DOMAINNAME"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # SSL Ciphers
+      - "--providers.file=true"
+      - "--providers.file.filename=/fileprovider/config.yml"
+      - "--entrypoints.websecure.http.tls.options=default"
+      # middlewares
+      - "--entrypoints.websecure.http.middlewares=hsts-header"
+      # Load example plugins
+      # - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
+      # - "--experimental.plugins.geoblock.version=v0.2.7"
+      ## Apply plugin middleware to all incomming traffic via entrypoints
+      # - "--entrypoints.websecure.http.middlewares=geoblock"
+      # - "--entryPoints.websecure.proxyProtocol.insecure"
+      # - "--entrypoints.websecure.forwardedHeaders.insecure"
+      # - "--entrypoints.web.http.middlewares=geoblock"
+      # - "--entryPoints.web.proxyProtocol.insecure"
+      # enable dashboard
+      - "--api=true"
+      - "--api.dashboard=$DASHBOARDENABLED"
+      - "--api.insecure=false"
+    security_opt:
+      - no-new-privileges:true
+    # cloudflare stuff
+    environment:
+      - CF_API_EMAIL=$CF_API_EMAIL
+      - CF_DNS_API_TOKEN=$CF_DNS_API_TOKEN
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/cloudflare
+      - traefik_file:/fileprovider
+    labels:
+      # https part
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.rule=Host(`t.$DOMAINNAME`)"
+      # important middleware
+      - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
+      # - "traefik.http.middlewares.traefik-auth.basicauth.users=$BASIC_AUTH_LOGIN"
+      # - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
+      # - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
+      ## Apply plugin middleware to single router/app
+      # - "traefik.http.routers.traefik-secure.middlewares=geoblock"
+      ## Configure plugin middleware
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.silentStartUp=false"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.allowLocalRequests=true"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.logLocalRequests=true"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.logAllowedRequests=true"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.logApiRequests=true"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.api=https://get.geojs.io/v1/ip/country/{ip}"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.apiTimeoutMs=500"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.cacheSize=25"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.forceMonthlyUpdate=true"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.allowUnknownCountries=false"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.unknownCountryApiResponse=nil"
+      # - "traefik.http.middlewares.geoblock.plugin.geoblock.countries[0]=DE"
+
+volumes:
+  traefik_certs:
+  traefik_file:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

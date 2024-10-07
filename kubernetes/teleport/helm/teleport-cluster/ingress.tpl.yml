@@ -1,0 +1,36 @@
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: teleport-cluster-proxy
+  namespace: my-teleport
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: <CLUSTERISSUER>
+spec:
+  rules:
+  - host: tp.<DOMAINNAME>
+    http:
+      paths:
+      - backend:
+          service:
+            name: teleport-cluster
+            port:
+              number: 443
+        path: /
+        pathType: Prefix
+  - host: '*.tp.<DOMAINNAME>'
+    http:
+      paths:
+      - backend:
+          service:
+            name: teleport-cluster
+            port:
+              number: 443
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - tp.<DOMAINNAME>
+    - '*.tp.<DOMAINNAME>'
+    secretName: teleport-san-cert

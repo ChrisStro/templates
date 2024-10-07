@@ -1,0 +1,10 @@
+# create snapshot and check longhorn ui
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  namespace: csi-app
+  name: csi-backup-delete-me
+spec:
+  volumeSnapshotClassName: longhorn-bak
+  source:
+    persistentVolumeClaimName: pvc-longhorndisk

@@ -1,0 +1,61 @@
+version: '2.0'
+services:
+  db:
+    image: mariadb:10.5
+    container_name: seafile-mysql
+    restart: unless-stopped
+    networks:
+      - backend
+    volumes:
+      - seafile_db:/var/lib/mysql  # Requested, specifies the path to MySQL data persistent store.
+    environment:
+      - MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD  # Requested, set the root's password of MySQL service.
+      - MYSQL_LOG_CONSOLE=$MYSQL_LOG_CONSOLE
+
+  memcached:
+    image: memcached:1.6
+    container_name: seafile-memcached
+    restart: unless-stopped
+    networks:
+      - backend
+    entrypoint: memcached -m 256
+
+  seafile:
+    image: seafileltd/seafile-mc:latest
+    container_name: seafile
+    restart: unless-stopped
+    networks:
+      - backend
+      - proxy_network
+    # ports:
+    #  - "80:80"
+    #  - "443:443" # If https is enabled, cancel the comment.
+    depends_on:
+      - db
+      - memcached
+    volumes:
+      - seafile_data:/shared   # Requested, specifies the path to Seafile data persistent store.
+    environment:
+      - DB_HOST=db
+      - DB_ROOT_PASSWD=$DB_ROOT_PASSWD
+      - TIME_ZONE=Etc/UTC
+      - SEAFILE_ADMIN_EMAIL=$SEAFILE_ADMIN_EMAIL
+      - SEAFILE_ADMIN_PASSWORD=$SEAFILE_ADMIN_PASSWORD
+      - SEAFILE_SERVER_LETSENCRYPT=false   # Whether to use https or not.
+      - SEAFILE_SERVER_HOSTNAME=$PUBLIC_HOSTNAME # Specifies your host name if https is enabled.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.seafile.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.seafile.tls=true"
+      # - "traefik.http.routers.seafile.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  seafile_db:
+  seafile_data:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

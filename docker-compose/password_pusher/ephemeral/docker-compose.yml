@@ -1,0 +1,20 @@
+services:
+  pwpush-ephemeral:
+    image: docker.io/pglombardo/pwpush:latest
+    container_name: pwpush-ephemeral
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    environment:
+      PWP__ENABLE_LOGINS: "false"
+      PWP__DEFAULT_LOCALE: de
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.pwpush-ephemeral.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.pwpush-ephemeral.tls=true"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

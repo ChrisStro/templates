@@ -1,0 +1,236 @@
+version: "3"
+services:
+  # init
+  init_management:
+    image: busybox
+    command:
+      - sh
+      - -c
+      - |
+        cat > /etc/netbird/management.json << EOF
+        {
+          "Stuns": [
+              {
+                  "Proto": "udp",
+                  "URI": "stun:$TURN_DOMAIN:3478",
+                  "Username": "",
+                  "Password": null
+              }
+          ],
+          "TURNConfig": {
+              "Turns": [
+                  {
+                      "Proto": "udp",
+                      "URI": "turn:$$TURN_DOMAIN:3478",
+                      "Username": "$$TURN_USER",
+                      "Password": "$$TURN_PASSWORD"
+                  }
+              ],
+              "CredentialsTTL": "12h",
+              "Secret": "secret",
+              "TimeBasedCredentials": false
+          },
+          "Signal": {
+              "Proto": $$NETBIRD_SIGNAL_PROTOCOL,
+              "URI": "$NETBIRD_DOMAIN:$$NETBIRD_SIGNAL_PORT",
+              "Username": "",
+              "Password": null
+          },
+          "Datadir": "/var/lib/netbird/",
+          "DataStoreEncryptionKey": "$$NETBIRD_DATASTORE_ENC_KEY",
+          "StoreConfig": {
+              "Engine": "$$NETBIRD_STORE_CONFIG_ENGINE"
+          },
+          "HttpConfig": {
+              "Address": "0.0.0.0:$NETBIRD_MGMT_API_PORT",
+              "AuthIssuer": "$NETBIRD_AUTH_AUTHORITY",
+              "AuthAudience": "$$NETBIRD_AUTH_AUDIENCE",
+              "AuthKeysLocation": "$NETBIRD_AUTH_JWT_CERTS",
+              "AuthUserIDClaim": "$NETBIRD_AUTH_USER_ID_CLAIM",
+              "CertFile":"$$NETBIRD_MGMT_API_CERT_FILE",
+              "CertKey":"$$NETBIRD_MGMT_API_CERT_KEY_FILE",
+              "IdpSignKeyRefreshEnabled": $NETBIRD_MGMT_IDP_SIGNKEY_REFRESH,
+              "OIDCConfigEndpoint":"$NETBIRD_AUTH_OIDC_CONFIGURATION_ENDPOINT"
+          },
+          "IdpManagerConfig": {
+              "ManagerType": "$NETBIRD_MGMT_IDP",
+              "ClientConfig": {
+                  "Issuer": "$NETBIRD_AUTH_AUTHORITY",
+                  "TokenEndpoint": "$NETBIRD_AUTH_TOKEN_ENDPOINT",
+                  "ClientID": "$NETBIRD_IDP_MGMT_CLIENT_ID",
+                  "ClientSecret": "$$NETBIRD_IDP_MGMT_CLIENT_SECRET",
+                  "GrantType": "client_credentials"
+              },
+              "ExtraConfig": $NETBIRD_IDP_MGMT_EXTRA_CONFIG,
+              "Auth0ClientCredentials": null,
+              "AzureClientCredentials": null,
+              "KeycloakClientCredentials": null,
+              "ZitadelClientCredentials": null
+          },
+          "DeviceAuthorizationFlow": {
+              "Provider": $$NETBIRD_AUTH_DEVICE_AUTH_PROVIDER,
+              "ProviderConfig": {
+                "Audience": "$NETBIRD_AUTH_CLIENT_ID",
+                "AuthorizationEndpoint": "",
+                "Domain": "$$NETBIRD_AUTH0_DOMAIN",
+                "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
+                "ClientSecret": "",
+                "TokenEndpoint": "$NETBIRD_AUTH_TOKEN_ENDPOINT",
+                "DeviceAuthEndpoint": "$$NETBIRD_AUTH_DEVICE_AUTH_ENDPOINT",
+                "Scope": "$$NETBIRD_AUTH_DEVICE_AUTH_SCOPE",
+                "UseIDToken": $$NETBIRD_AUTH_DEVICE_AUTH_USE_ID_TOKEN,
+                "RedirectURLs": null
+              }
+          },
+          "PKCEAuthorizationFlow": {
+              "ProviderConfig": {
+                  "Audience": "$$NETBIRD_AUTH_PKCE_AUDIENCE",
+                  "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
+                  "ClientSecret": "$$NETBIRD_AUTH_CLIENT_SECRET",
+                  "Domain": "",
+                  "AuthorizationEndpoint": "$$NETBIRD_AUTH_PKCE_AUTHORIZATION_ENDPOINT",
+                  "TokenEndpoint": "$NETBIRD_AUTH_TOKEN_ENDPOINT",
+                  "Scope": "$NETBIRD_AUTH_SUPPORTED_SCOPES",
+                  "RedirectURLs": [$$NETBIRD_AUTH_PKCE_REDIRECT_URLS],
+                  "UseIDToken": $$NETBIRD_AUTH_PKCE_USE_ID_TOKEN
+              }
+          }
+        }
+        EOF
+        echo -e "\n------------final file------------\n"
+        cat /etc/netbird/management.json
+    environment:
+      - NETBIRD_IDP_MGMT_EXTRA_MANAGEMENT_ENDPOINT=$NETBIRD_IDP_MGMT_EXTRA_MANAGEMENT_ENDPOINT
+      - NETBIRD_AUTH_PKCE_AUDIENCE=$NETBIRD_AUTH_CLIENT_ID
+      - NETBIRD_AUTH_PKCE_USE_ID_TOKEN=false
+      - NETBIRD_AUTH_DEVICE_AUTH_USE_ID_TOKEN=false
+      - NETBIRD_AUTH_DEVICE_AUTH_PROVIDER="hosted"
+      - NETBIRD_AUTH_AUDIENCE=$NETBIRD_AUTH_CLIENT_ID
+      - NETBIRD_SIGNAL_PROTOCOL="https"
+      - NETBIRD_SIGNAL_PORT=443
+      - NETBIRD_MGMT_API_PORT=443
+      # Secrets
+      - NETBIRD_IDP_MGMT_CLIENT_SECRET=$NETBIRD_IDP_MGMT_CLIENT_SECRET
+      - NETBIRD_DATASTORE_ENC_KEY=$NETBIRD_DATASTORE_ENC_KEY
+      - NETBIRD_AUTH_CLIENT_SECRET=$NETBIRD_AUTH_CLIENT_SECRET
+      - NETBIRD_STORE_CONFIG_ENGINE=$NETBIRD_STORE_CONFIG_ENGINE
+    volumes:
+      - netbird-config:/etc/netbird
+
+  #UI dashboard
+  dashboard:
+    # image: wiretrustee/dashboard:latest
+    image: netbirdio/dashboard:main
+    restart: unless-stopped
+    depends_on:
+      init_management:
+        condition: service_completed_successfully
+    networks:
+      - proxy_network
+    environment:
+      # Endpoints
+      - NETBIRD_MGMT_API_ENDPOINT=https://$NETBIRD_DOMAIN:443
+      - NETBIRD_MGMT_GRPC_API_ENDPOINT=https://$NETBIRD_DOMAIN:443
+      # OIDC
+      - AUTH_AUDIENCE=$NETBIRD_AUTH_CLIENT_ID
+      - AUTH_CLIENT_ID=$NETBIRD_AUTH_CLIENT_ID
+      - AUTH_CLIENT_SECRET=$NETBIRD_AUTH_CLIENT_SECRET
+      - AUTH_AUTHORITY=$NETBIRD_AUTH_AUTHORITY
+      - USE_AUTH0=$NETBIRD_USE_AUTH0
+      - AUTH_SUPPORTED_SCOPES=$NETBIRD_AUTH_SUPPORTED_SCOPES
+      - NETBIRD_IDP_MGMT_EXTRA_CONFIG=$NETBIRD_IDP_MGMT_EXTRA_CONFIG
+      - AUTH_REDIRECT_URI=/auth
+      - AUTH_SILENT_REDIRECT_URI=/silent-auth
+      - LETSENCRYPT_DOMAIN=none
+      - NETBIRD_DISABLE_LETSENCRYPT=true
+      - NETBIRD_TOKEN_SOURCE=accessToken
+      - NGINX_SSL_PORT=443
+    labels:
+    - traefik.enable=true
+    - traefik.http.routers.netbird-dashboard.rule=Host(`$NETBIRD_DOMAIN`)
+    - traefik.http.services.netbird-dashboard.loadbalancer.server.port=80
+
+  # Signal
+  signal:
+    image: netbirdio/signal:latest
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    volumes:
+      - netbird-signal:/var/lib/netbird
+    #ports:
+    #  - 10000:80
+  #      # port and command for Let's Encrypt validation
+  #      - 443:443
+  #    command: ["--letsencrypt-domain", "", "--log-file", "console"]
+    labels:
+    - traefik.enable=true
+    - traefik.http.routers.netbird-signal.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/signalexchange.SignalExchange/`)
+    - traefik.http.services.netbird-signal.loadbalancer.server.port=80
+    - traefik.http.services.netbird-signal.loadbalancer.server.scheme=h2c
+
+  # Management
+  management:
+    image: netbirdio/management:latest
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    depends_on:
+      - dashboard
+    volumes:
+      - netbird-mgmt:/var/lib/netbird
+      - netbird-config:/etc/netbird:ro
+    command: [
+      "--port", "443",
+      "--log-file", "console",
+      "--disable-anonymous-metrics=$NETBIRD_DISABLE_ANONYMOUS_METRICS",
+      "--single-account-mode-domain=$NETBIRD_MGMT_SINGLE_ACCOUNT_MODE_DOMAIN",
+      "--dns-domain=$NETBIRD_MGMT_DNS_DOMAIN",
+      "--disable-single-account-mode=$NETBIRD_MGMT_DISABLE_SINGLE_ACCOUNT_MODE"
+      ]
+    labels:
+    - traefik.enable=true
+    - traefik.http.routers.netbird-api.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/api`)
+    - traefik.http.routers.netbird-api.service=netbird-api
+    - traefik.http.services.netbird-api.loadbalancer.server.port=443
+
+    - traefik.http.routers.netbird-management.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/management.ManagementService/`)
+    - traefik.http.routers.netbird-management.service=netbird-management
+    - traefik.http.services.netbird-management.loadbalancer.server.port=443
+    - traefik.http.services.netbird-management.loadbalancer.server.scheme=h2c
+
+  # coturn:
+  #   image: coturn/coturn:latest
+  #   restart: unless-stopped
+  #   domainname: $NETBIRD_DOMAIN
+  #   ports:
+  #   - "3478:3478/udp"
+  #   - "$TURN_MIN_PORT-$TURN_MAX_PORT:$TURN_MIN_PORT-$TURN_MAX_PORT/udp"
+  #   command:
+  #   - --user=$TURN_USER:$TURN_PASSWORD
+  #   - --min-port=$TURN_MIN_PORT
+  #   - --max-port=$TURN_MAX_PORT
+  #   - --listening-port=3478
+  #   - --tls-listening-port=5349
+  #   - --cert=/etc/coturn/certs/cert.pem
+  #   - --pkey=/etc/coturn/private/privkey.pem
+  #   - --lt-cred-mech
+  #   - --realm=wiretrustee.com
+  #   - --log-file=stdout
+  #   - --no-cli
+  #   - --fingerprint
+  #   - --lt-cred-mech
+  #   - --no-software-attribute
+  #   - --pidfile="/var/tmp/turnserver.pid"
+  #   environment:
+  #   - TZ=Europe/Berlin
+
+volumes:
+  netbird-mgmt:
+  netbird-signal:
+  netbird-config:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

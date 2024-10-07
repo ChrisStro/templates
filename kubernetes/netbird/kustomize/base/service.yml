@@ -1,0 +1,57 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: dashboard
+spec:
+  selector:
+    app: dashboard
+  ports:
+    - name: http
+      port: 80
+  type: ClusterIP
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: signal
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: h2c
+spec:
+  selector:
+    app: signal
+  ports:
+    - name: signal
+      port: 80
+  clusterIP: None
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: netbird-api
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: http
+spec:
+  selector:
+    app: management
+  ports:
+    - name: netbird-api
+      port: 443
+  clusterIP: None
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: management
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: h2c
+spec:
+  selector:
+    app: management
+  ports:
+    - name: management
+      port: 443
+  clusterIP: None

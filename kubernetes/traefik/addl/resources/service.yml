@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-dashboard
+  namespace: traefik-system
+spec:
+  selector:
+    app.kubernetes.io/name: traefik
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+
+# precheck using forwarding to pod local
+# kubectl port-forward traefik-7cd4fcff68-m62d7 9000:9000 -n kube-system
+
+# precheck using forwarding to pod remote
+# kubectl port-forward service/traefik-dashboard 9000:9000 --address 0.0.0.0 -n kube-system
+
+# precheck using web request
+# curl -H 'Host: dashboard.traefik.sslip.io' 'http://10.43.95.158:9000/dashboard/'

@@ -1,0 +1,63 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: vaultwarden-pvc
+  namespace: my-vaultwarden
+spec:
+  accessModes:
+    - ReadWriteOnce
+  # storageClassName: longhorn
+  resources:
+    requests:
+      storage: 500Mi
+  # volumeName: NAMEOFEXISTINGPV
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: vaultwarden
+  namespace: my-vaultwarden
+  labels:
+    app: vaultwarden
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+     app: vaultwarden
+  template:
+    metadata:
+      labels:
+        app: vaultwarden
+    spec:
+      containers:
+        - name: vaultwarden
+          image: vaultwarden/server:latest
+          ports:
+            - containerPort: 80
+          envFrom:
+            - secretRef:
+                name: vaultwarden-secret
+          volumeMounts:
+            - name: vaultwarden-storage
+              mountPath: /data
+      restartPolicy: Always
+      volumes:
+        - name: vaultwarden-storage
+          persistentVolumeClaim:
+            claimName: vaultwarden-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: vaultwarden-svc
+  namespace: my-vaultwarden
+spec:
+  selector:
+    app: vaultwarden
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

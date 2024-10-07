@@ -1,0 +1,120 @@
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: management
+spec:
+  replicas: 1
+  serviceName: management
+  selector:
+    matchLabels:
+      app: management
+  template:
+    metadata:
+      labels:
+        app: management
+    spec:
+      initContainers:
+        - name: init
+          image: busybox:1.28
+          command:
+            - sh
+            - /create_management-json.sh
+          envFrom:
+            - configMapRef:
+                name: netbird-cm
+            - secretRef:
+                name: netbird-secrets
+            - configMapRef:
+                name: coturn-cm
+          env:
+            - name: TURN_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_DOMAIN
+            - name: NETBIRD_AUTH_PKCE_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_AUTH_CLIENT_ID
+            # - name: NETBIRD_MGMT_IDP_SIGNKEY_REFRESH
+            #   value: "true"
+            # - name: NETBIRD_IDP_MGMT_EXTRA_CONFIG
+            #   value:
+            - name: NETBIRD_AUTH_PKCE_USE_ID_TOKEN
+              value: "false"
+            - name: NETBIRD_AUTH_DEVICE_AUTH_USE_ID_TOKEN
+              value: "false"
+            - name: NETBIRD_AUTH_DEVICE_AUTH_PROVIDER
+              value: "hosted"
+            - name: NETBIRD_SIGNAL_PROTOCOL
+              value: https
+            - name: NETBIRD_SIGNAL_PORT
+              value: "443"
+            - name: NETBIRD_MGMT_API_PORT
+              value: "443"
+          volumeMounts:
+            - name:  init-scripts
+              mountPath:  /create_management-json.sh
+              subPath: create_management-json.sh
+            - name: config-drive
+              mountPath: /mnt
+      containers:
+        - name: management
+          image: netbirdio/management
+          ports:
+            - name: management
+              containerPort: 443
+          envFrom:
+            - configMapRef:
+                name: netbird-cm
+            - secretRef:
+                name: netbird-secrets
+          env:
+            - name: NETBIRD_DISABLE_ANONYMOUS_METRICS
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_DISABLE_ANONYMOUS_METRICS
+            - name: NETBIRD_MGMT_SINGLE_ACCOUNT_MODE_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_DOMAIN
+            - name: NETBIRD_MGMT_DNS_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_MGMT_DNS_DOMAIN
+          args:
+            - --port
+            - "443"
+            - --log-file
+            - console
+            - "--disable-anonymous-metrics=$(NETBIRD_DISABLE_ANONYMOUS_METRICS)"
+            - --single-account-mode-domain=$(NETBIRD_MGMT_SINGLE_ACCOUNT_MODE_DOMAIN)
+            - --dns-domain=$(NETBIRD_MGMT_DNS_DOMAIN)
+            - --disable-single-account-mode=$(NETBIRD_MGMT_DISABLE_SINGLE_ACCOUNT_MODE)
+          volumeMounts:
+            - name: management-storage
+              mountPath: /var/lib/netbird
+            - name: config-drive
+              mountPath: /etc/netbird/management.json
+              subPath: management.json # created by init
+      volumes:
+        - name: config-drive
+          emptyDir:
+            sizeLimit: 10Mi
+        - name: init-scripts
+          configMap:
+            name: init-scripts
+  volumeClaimTemplates:
+    - metadata:
+        name: management-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 512Mi

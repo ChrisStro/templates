@@ -1,0 +1,138 @@
+## passbolt-db
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: passbolt-db-pvc
+  namespace: my-passbolt
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: passbolt-db
+  namespace: my-passbolt
+  labels:
+    app: passbolt-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: passbolt-db
+  template:
+    metadata:
+      labels:
+        app: passbolt-db
+    spec:
+      containers:
+        - image: mariadb:10.3
+          name: db
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: passbolt-db-cm
+            - secretRef:
+                name: passbolt-db-secret
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: passbolt-db-storage
+      restartPolicy: Always
+      volumes:
+        - name: passbolt-db-storage
+          persistentVolumeClaim:
+            claimName: passbolt-db-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: passbolt-db
+ namespace: my-passbolt
+spec:
+  clusterIP: None
+  selector:
+    app: passbolt-db
+
+## passbolt-ce
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: passbolt-ce-pvc
+  namespace: my-passbolt
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1.5Gi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: passbolt-ce
+  namespace: my-passbolt
+  labels:
+    app: passbolt-ce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: passbolt-ce
+  template:
+    metadata:
+      labels:
+        app: passbolt-ce
+    spec:
+      securityContext:
+        fsGroup: 33 # id of www-data group ; needed for volume access with non-root image
+      containers:
+        - name: passbolt
+          # image: passbolt/passbolt:latest-ce
+          image: passbolt/passbolt:latest-ce-non-root
+          ports:
+            - name: http
+              containerPort: 8080
+          resources: {}
+          args:
+            - /usr/bin/wait-for.sh
+            - -t
+            - "0"
+            - $(DATASOURCES_DEFAULT_HOST):3306
+            - --
+            - /docker-entrypoint.sh
+          envFrom:
+            - configMapRef:
+                name: passbolt-ce-cm
+            - secretRef:
+                name: passbolt-ce-secret
+          volumeMounts:
+            - mountPath: /etc/passbolt/gpg
+              name: passbolt-ce-storage
+              subPath: gpg
+            - mountPath: /etc/passbolt/jwt
+              name: passbolt-ce-storage
+              subPath: jwt
+      restartPolicy: Always
+      volumes:
+        - name: passbolt-ce-storage
+          persistentVolumeClaim:
+            claimName: passbolt-ce-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: passbolt-ce
+ namespace: my-passbolt
+spec:
+  clusterIP: None
+  selector:
+    app: passbolt-ce

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: change-storage-class-config
+  namespace: velero
+  labels:
+    # this value-less label identifies the ConfigMap as
+    # config for a plugin (i.e. the built-in restore item action plugin)
+    velero.io/plugin-config: ""
+    # this label identifies the name and kind of plugin
+    # that this ConfigMap is for.
+    velero.io/change-storage-class: RestoreItemAction
+data:
+  # add 1+ key-value pairs here, where the key is the old
+  # storage class name and the value is the new storage
+  # class name.
+  # <old-storage-class>: <new-storage-class>
+  longhorn: "microk8s-hostpath" # hostpath not supporte but local pv is

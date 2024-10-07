@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  cloudflaredTunnel:
+    image: "cloudflare/cloudflared:latest"
+    container_name: cloudflaredTunnel
+    restart: unless-stopped
+    networks:
+      - backend
+    # ports:
+    #   - 8888:8888
+    command: access tcp -url 0.0.0.0:8888 -hostname $TUNNEL_HOSTNAME
+    environment:
+     - TUNNEL_HOSTNAME=$TUNNEL_HOSTNAME
+     - TUNNEL_SERVICE_TOKEN_ID=$TUNNEL_SERVICE_TOKEN_ID
+     - TUNNEL_SERVICE_TOKEN_SECRET=$TUNNEL_SERVICE_TOKEN_SECRET
+
+networks:
+  backend:

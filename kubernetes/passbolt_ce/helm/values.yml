@@ -1,0 +1,104 @@
+# Configure redis dependency chart
+redis:
+  auth:
+    password: "CHANGEME"
+
+mariadb:
+  architecture: standalone #changed
+  auth:
+    rootPassword: root
+    username: CHANGEME
+    password: CHANGEME
+    database: passbolt
+    replicationPassword: CHANGEME
+
+## Passbolt container and sidecar parameters
+app:
+  cache:
+    # Use CACHE_CAKE_DEFAULT_* variables to configure the connection to redis instance
+    # on the passboltEnv configuration section
+    redis:
+      # -- By enabling redis the chart will mount a configuration file on /etc/passbolt/app.php
+      # That instructs passbolt to store sessions on redis and to use it as a general cache.
+      enabled: true # changed
+      sentinelProxy:
+        # -- Inject a haproxy sidecar container configured as a proxy to redis sentinel
+        # Make sure that CACHE_CAKE_DEFAULT_SERVER is set to '127.0.0.1' to use the proxy
+        enabled: true
+        # -- Configure redis sentinel proxy image
+        image:
+          # -- Configure redis sentinel image repository
+          repository: haproxy
+          # -- Configure redis sentinel image tag
+          tag: "latest"
+        # -- Configure the passbolt deployment resources
+  resources: {}
+
+# -- Pro subscription key in base64 only if you are using pro version
+# subscriptionKey:
+# -- Configure passbolt subscription key path
+# subscription_keyPath: /etc/passbolt/subscription_key.txt
+
+# -- Gpg server private key in base64
+gpgServerKeyPrivate: ""
+# -- Gpg server public key in base64
+gpgServerKeyPublic: ""
+
+# -- Configure passbolt jwt directory
+jwtPath: /etc/passbolt/jwt
+# -- JWT server private key in base64
+jwtServerPrivate:
+# -- JWT server public key in base64
+jwtServerPublic:
+
+passboltEnv:
+  plain:
+    PASSBOLT_LEGAL_PRIVACYPOLICYURL: https://www.passbolt.com/privacy
+    APP_FULL_BASE_URL: https://passbolt.local.127.0.0.1.sslip.io
+    PASSBOLT_SSL_FORCE: true
+    PASSBOLT_REGISTRATION_PUBLIC: true
+    CACHE_CAKE_DEFAULT_SERVER: 127.0.0.1
+    EMAIL_TRANSPORT_DEFAULT_PORT: 587
+    DEBUG: false
+    PASSBOLT_KEY_EMAIL: passbolt@yourdomain.com
+    PASSBOLT_SELENIUM_ACTIVE: false
+    PASSBOLT_PLUGINS_LICENSE_LICENSE: /etc/passbolt/subscription_key.txt
+    EMAIL_DEFAULT_FROM: no-reply@passbolt.local
+    EMAIL_TRANSPORT_DEFAULT_HOST: smtp.mail.org # changed by me
+    EMAIL_TRANSPORT_DEFAULT_TLS: true
+    PASSBOLT_JWT_SERVER_KEY: /var/www/passbolt/config/jwt/jwt.key
+    PASSBOLT_JWT_SERVER_PEM: /var/www/passbolt/config/jwt/jwt.pem
+    PASSBOLT_PLUGINS_JWT_AUTHENTICATION_ENABLED: true
+  secret:
+    CACHE_CAKE_DEFAULT_PASSWORD: CHANGEME
+    DATASOURCES_DEFAULT_PASSWORD: CHANGEME
+    DATASOURCES_DEFAULT_USERNAME: CHANGEME
+    DATASOURCES_DEFAULT_DATABASE: passbolt
+    EMAIL_TRANSPORT_DEFAULT_USERNAME: CHANGEME
+    EMAIL_TRANSPORT_DEFAULT_PASSWORD: CHANGEME
+    # -- Configure passbolt server gpg key fingerprint
+    # PASSBOLT_GPG_SERVER_KEY_FINGERPRINT:
+    # -- Configure passbolt security salt.
+    # SECURITY_SALT:
+
+## Passbolt deployment parameters
+# -- If autoscaling is disabled this will define the number of pods to run
+replicaCount: 1
+# Configure autoscaling on passbolt deployment
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+
+ingress:
+  enabled: true
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: selfsigned
+  hosts:
+    - host: passbolt.local.127.0.0.1.sslip.io
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: {}

@@ -1,0 +1,36 @@
+services:
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: code-server
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+      - PASSWORD=$LOGIN_PASSWORD
+      #- HASHED_PASSWORD=
+      - SUDO_PASSWORD=$SUDO_PASSWORD
+      #- SUDO_PASSWORD_HASH=
+      - PROXY_DOMAIN=$PUBLIC_HOSTNAME
+      - DEFAULT_WORKSPACE=/config/workspace #optional
+    volumes:
+      - config:/config
+      - /opt:/host_opt
+    networks:
+      proxy_network:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.code-server.entrypoints=websecure"
+      - "traefik.http.routers.code-server.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.code-server-secure.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.code-server-secure.tls=true"
+      - "traefik.http.routers.code-server-secure.service=code-server"
+      - "traefik.http.services.code-server.loadbalancer.server.port=8443"
+
+volumes:
+  config:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

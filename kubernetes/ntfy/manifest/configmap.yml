@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ntfy-config-cm
+  namespace: my-ntfy
+data:
+  server.yml: |
+    # Template: https://github.com/binwiederhier/ntfy/blob/main/server/server.yml
+    cache-file: "/var/cache/ntfy/cache.db"
+    attachment-cache-dir: "/var/cache/ntfy/attachments"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ntfy-app-cm
+  namespace: my-ntfy
+data:
+  TZ: Europe/Berlin
+  NTFY_DEBUG: "false"
+  NTFY_LOG_LEVEL: INFO
+  NTFY_BASE_URL: https://ntfy.local.127.0.0.1.sslip.io

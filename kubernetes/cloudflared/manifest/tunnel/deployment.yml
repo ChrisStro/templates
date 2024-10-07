@@ -1,0 +1,77 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: cf-tunnel
+  name: cf-tunnel
+  namespace:  my-cloudflared
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      pod: cf-tunnel
+  template:
+    metadata:
+      labels:
+        pod: cf-tunnel
+    spec:
+      containers:
+      - name: cf-tunnel
+        image: cloudflare/cloudflared:latest
+        resources: {}
+        args:
+        - tunnel
+        - run
+        envFrom:
+        - configMapRef:
+            name: cf-tunnel-cm
+        - secretRef:
+            name: cf-tunnel-secret
+
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   labels:
+#     app: cf-tunnel
+#   name: cf-tunnel
+#   namespace: my-cloudflared
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       pod: cloudflared
+#   template:
+#     metadata:#
+#       labels:
+#         pod: cloudflared
+#     spec:
+#       containers:
+#       - image: cloudflare/cloudflared:latest
+#         name: cloudflared
+#         command:
+#         - cloudflared
+#         - tunnel
+#         # In a k8s environment, the metrics server needs to listen outside the pod it runs on.
+#         # The address 0.0.0.0:2000 allows any pod in the namespace.
+#         - --metrics
+#         - 0.0.0.0:2000
+#         - run
+#         args:
+#         - --token
+#         - "$(TUNNEL_TOKEN)"
+#         envFrom:
+#         - configMapRef:
+#             name: cf-tunnel-cm
+#         - secretRef:
+#             name: cf-tunnel-secret
+#         livenessProbe:
+#           httpGet:
+#           # Cloudflared has a /ready endpoint which returns 200 if and only if
+#           # it has an active connection to the edge.
+#             path: /ready
+#             port: 2000
+#           failureThreshold: 1
+#           initialDelaySeconds: 10
+#           periodSeconds: 10

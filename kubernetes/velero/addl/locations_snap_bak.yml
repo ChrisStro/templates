@@ -1,0 +1,44 @@
+# ---
+# kind: Secret
+# apiVersion: v1
+# metadata:
+#   name: cloud-credentials
+#   namespace: velero
+# type: Opaque
+# Data:
+#   cloud: W32....== # echo -e '[default]\naws_access_key_id = CHANGEME\naws_secret_access_key = CHANGEME' | openssl base64 -A
+
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: cloud-credentials
+  namespace: velero
+type: Opaque
+stringData:
+  cloud: |
+    [default]
+    aws_access_key_id = CHANGEME
+    aws_secret_access_key = CHANGEME
+
+---
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: default
+  namespace: velero
+spec:
+  backupSyncPeriod: 2m0s
+  provider: aws
+  objectStorage:
+    bucket: BUCKETNAME
+  credential:
+    name: cloud-credentials
+    key: cloud
+  config:
+    region: minio
+    profile: "default"
+    s3ForcePathStyle: "true"
+    s3Url: "http://minio:9000"
+    publicUrl: "https://minio.mycluster.com"
+  accessMode: ReadWrite # ReadOnly

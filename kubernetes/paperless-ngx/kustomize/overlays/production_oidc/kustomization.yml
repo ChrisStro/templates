@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: paperless-ngx
+resources:
+- ../production
+- cm_oidc.yml
+configMapGenerator:
+- name: paperless-ngx-app-cm
+  behavior: merge
+  # CONFIGURE YOUR cm_oidc CONFIGMAP
+  literals:
+  # - PAPERLESS_DISABLE_REGULAR_LOGIN=true
+  - PAPERLESS_SOCIAL_AUTO_SIGNUP=true
+  - PAPERLESS_SOCIALACCOUNT_ALLOW_SIGNUPS=true
+  - PAPERLESS_APPS=allauth.socialaccount.providers.openid_connect
+patches:
+# add OIDC configmap to deployment
+- target:
+    name: paperless-ngx-app
+    kind: Deployment
+  path: patch-paperless-ngx.yml
+- target:
+    name: allow-paperless-ngx
+    kind: NetworkPolicy
+  path: patch-netpol.yml

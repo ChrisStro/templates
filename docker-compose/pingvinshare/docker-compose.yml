@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  pingvin-share:
+    image: stonith404/pingvin-share
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    # ports:
+    #   - 3000:3000
+    volumes:
+      - pingvinshare_data:/opt/app/backend/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.pingvinshare.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.pingvinshare.tls=true"
+      # - "traefik.http.routers.pingvinshare.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  pingvinshare_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

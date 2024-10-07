@@ -1,0 +1,27 @@
+# Default values for minio-operator.
+
+operator:
+  ## Setup environment variables for the Operator
+  # env:
+  #   - name: MINIO_OPERATOR_TLS_ENABLE
+  #     value: "off"
+  #   - name: MINIO_CONSOLE_TLS_ENABLE
+  #     value: "off"
+  #   - name: CLUSTER_DOMAIN
+  #     value: "cluster.domain"
+  #   - name: WATCHED_NAMESPACE
+  #     value: ""
+  replicaCount: 2
+
+console:
+  replicaCount: 1
+  ingress:
+    enabled: true
+    ingressClassName: ""
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      cert-manager.io/cluster-issuer: selfsigned
+    labels: {}
+    host: operator.minio.local.127.0.0.1.sslip.io
+    path: /
+    pathType: Prefix

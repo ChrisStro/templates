@@ -1,0 +1,29 @@
+## passbolt-db
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: passbolt-db-cm
+  namespace: my-passbolt
+data:
+  MYSQL_RANDOM_ROOT_PASSWORD: "true"
+  MYSQL_DATABASE: passbolt
+  MYSQL_USER: passbolt
+
+## passbolt-ce
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: passbolt-ce-cm
+  namespace: my-passbolt
+data:
+  APP_FULL_BASE_URL: https://passbolt.local.127.0.0.1.sslip.io
+  DATASOURCES_DEFAULT_HOST: "passbolt-db"
+  DATASOURCES_DEFAULT_USERNAME: passbolt
+  DATASOURCES_DEFAULT_DATABASE: passbolt
+  EMAIL_TRANSPORT_DEFAULT_HOST: smtp.mail.org
+  EMAIL_TRANSPORT_DEFAULT_PORT: "587"
+  EMAIL_TRANSPORT_DEFAULT_TLS: "true"
+  EMAIL_TRANSPORT_DEFAULT_USERNAME: me@mail.org
+  EMAIL_DEFAULT_FROM: "$EMAIL_DEFAULT_FROM"

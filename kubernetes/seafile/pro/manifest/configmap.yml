@@ -1,0 +1,25 @@
+## seafile-db
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: seafile-db-cm
+  namespace: my-seafile
+data:
+  MYSQL_LOG_CONSOLE: "true"
+
+## seafile-app
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: seafile-app-cm
+  namespace: my-seafile
+data:
+  SEAFILE_SERVER_HOSTNAME: seafile.local.127.0.0.1.sslip.io
+  SEAFILE_ADMIN_EMAIL: CHANGEME@CHANGEME.org
+  SEAFILE_SERVER_LETSENCRYPT: "false"
+  DB_HOST: seafile-db
+  TIME_ZONE: Europe/Berlin
+  ONLYOFFICE_JWT_SECRET: 'your-secret-string'
+  # NON_ROOT: true

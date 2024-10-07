@@ -1,0 +1,51 @@
+clusterName: "<DOMAINNAME>"
+
+auth:
+  teleportConfig:
+    teleport:
+      cache:
+        enabled: false
+    auth_service:
+      authentication:
+        webauthn:
+          rp_id: <DOMAINNAME>
+      client_idle_timeout: 2h
+      client_idle_timeout_message: "Connection closed after 2hours without activity"
+  # teleportConfig: {}
+
+proxy:
+  teleportConfig:
+    teleport:
+      cache:
+        enabled: false
+    proxy_service:
+      https_keypairs: []
+        # - key_file: /my-custom-mount/key.pem
+        #   cert_file: /my-custom-mount/cert.pem
+  # teleportConfig: {}
+
+authentication:
+  # Default authentication type. Possible values are 'local' and 'github' for OSS, plus 'oidc' and 'saml' for Enterprise.
+  type: local
+  localAuth: true
+  # Second factor requirements for users of the Teleport cluster.
+  # Possible values are 'off', 'on', 'otp', 'optional' and 'webauthn'.
+  secondFactor: "on"
+
+proxyListenerMode: "multiplex"
+publicAddr:
+  - tp.<DOMAINNAME>:443
+
+acme: false
+enterprise: false
+
+podSecurityPolicy:
+  enabled: true
+chartMode: standalone
+
+service:
+  type: ClusterIP
+  spec: {}
+
+ingress:
+  enabled: false # create own manifest to trigger cert-manager

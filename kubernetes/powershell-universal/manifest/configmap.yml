@@ -1,0 +1,12 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: psuniversal-cm
+  namespace: my-psuniversal
+data:
+  Data__RepositoryPath: /home/data/Repository
+  Data__ConnectionString: /home/data/database.db
+  UniversalDashboard__AssetsFolder: /home/data/UniversalDashboard
+  Logging__Path: /home/data/logs/log.txt
+  TZ: Europe/Amsterdam

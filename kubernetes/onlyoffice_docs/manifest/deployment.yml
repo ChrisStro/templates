@@ -1,0 +1,79 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: oods-app-pvc
+  namespace: my-oods
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: oods
+  namespace: my-oods
+spec:
+  selector:
+    matchLabels:
+      app: oods
+  template:
+    metadata:
+      labels:
+        app: oods
+    spec:
+      containers:
+      - name: oods
+        image: onlyoffice/documentserver:latest
+        ports:
+        - containerPort: 80
+        # resources:
+        #   limits:
+        #     memory: "512Mi"
+        #     cpu: "1000m"
+        envFrom:
+         - configMapRef:
+             name: oods-app-cm
+        volumeMounts:
+          - name: oods-app-storage
+            subPath: document_data
+            mountPath: /var/www/onlyoffice/Data
+          - name: oods-app-storage
+            subPath: document_log
+            mountPath: /var/log/onlyoffice
+      volumes:
+        - name: oods-app-storage
+          persistentVolumeClaim:
+            claimName: oods-app-pvc
+          # hostPath:
+          #   path: /MY/PATH/TO/HOSTFOLDER
+          #   type: Directory
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: oods
+  namespace: my-oods
+spec:
+  selector:
+    app: oods
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+kind: Middleware
+apiVersion: traefik.containo.us/v1alpha1
+metadata:
+  name: onlyoffice-headers
+  namespace: my-oods
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"

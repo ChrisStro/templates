@@ -1,0 +1,9 @@
+- op: add
+  path: /spec/egress/3
+  value:
+    to:
+    - ipBlock:
+        # public ip of OIDC server
+        cidr: IP.OF.OIDC.SERVER
+    ports:
+    - port: 443

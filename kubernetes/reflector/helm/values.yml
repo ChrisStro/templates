@@ -1,0 +1,12 @@
+replicaCount: 1
+
+configuration:
+  logging:
+    minimumLevel: Information
+  watcher:
+    timeout: ""
+  kubernetes:
+    skipTlsVerify: false
+
+# nodeSelector:
+#   worker: "true"

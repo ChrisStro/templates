@@ -1,0 +1,41 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: netbird-ingress
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  rules:
+  - host: skynet.public.127.0.0.1.sslip.io
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: dashboard
+              port:
+                name: http # http/80
+        - path: /signalexchange.SignalExchange/
+          pathType: Prefix
+          backend:
+            service:
+              name: signal
+              port:
+                name: signal # h2c/80
+        - path: /management.ManagementService/
+          pathType: Prefix
+          backend:
+            service:
+              name: management
+              port:
+                name: management # h2c/443
+        - path: /api
+          pathType: Prefix
+          backend:
+            service:
+              name: netbird-api
+              port:
+                name: netbird-api # http/443
+  tls: []

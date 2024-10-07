@@ -1,0 +1,91 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: secheaders
+  namespace: my-netmaker
+spec:
+  headers:
+    #HSTS
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 31536000
+    forceSTSHeader: true
+    sslRedirect: true
+    referrerPolicy: "same-origin"
+    frameDeny: true
+    contentTypeNosniff: true
+    browserXssFilter: true
+    accessControlAllowMethods: ["GET", "OPTIONS", "PUT"]
+    accessControlMaxAge: 100
+    customFrameOptionsValue: SAMEORIGIN
+    contentSecurityPolicy: frame-ancestors 'self'
+    permissionsPolicy: geolocation=(), microphone=()
+    referrerPolicy: no-referrer
+
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: netmaker-api
+  namespace: my-netmaker
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  rules:
+  - host: api.NETMAKER_BASE_DOMAIN
+    http:
+     paths:
+     - path: /
+       pathType: Prefix
+       backend:
+        service:
+         name: netmaker-api
+         port:
+          number: 8081
+  tls: []
+
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: netmaker-ui
+  namespace: my-netmaker
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: my-netmaker-secheaders@kubernetescrd
+spec:
+  rules:
+  - host: dashboard.NETMAKER_BASE_DOMAIN
+    http:
+     paths:
+     - path: /
+       pathType: Prefix
+       backend:
+        service:
+         name: netmaker-ui
+         port:
+          number: 80
+  tls: []
+
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: netmaker-mq
+  namespace: my-netmaker
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  rules:
+  - host: broker.NETMAKER_BASE_DOMAIN
+    http:
+     paths:
+     - path: /
+       pathType: Prefix
+       backend:
+        service:
+         name: netmaker-mq
+         port:
+          number: 8883
+  tls: []

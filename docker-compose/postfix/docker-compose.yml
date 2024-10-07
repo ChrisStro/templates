@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  smtp:
+    container_name: postfix
+    ports:
+      - "525:25"
+    image: juanluisbaptiste/postfix:latest
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+    environment:
+      - SMTP_SERVER=$SMTP_SERVER
+      - SMTP_PORT=587
+      - SERVER_HOSTNAME=$SERVER_HOSTNAME
+      - SMTP_USERNAME=$SMTP_USERNAME
+      - SMTP_PASSWORD=$SMTP_PASSWORD
+      - SMTP_NETWORKS=$SMTP_NETWORKS # 10.0.0.0/23,192.168.20.0/24 allow from
+    restart: unless-stopped

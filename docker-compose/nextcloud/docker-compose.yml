@@ -1,0 +1,61 @@
+version: '3.7'
+
+services:
+  mariadb:
+    image: mariadb
+    container_name: nextcloud-db
+    restart: unless-stopped
+    networks:
+      - backend
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW --innodb_read_only_compressed=OFF
+    volumes:
+      - nextcloud_db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
+      - MYSQL_PASSWORD=$MYSQL_PASSWORD
+      - MYSQL_DATABASE=$MYSQL_DATABASE
+      - MYSQL_USER=$MYSQL_USER
+
+  redis:
+    image: redis
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    networks:
+      - backend
+
+  nextcloud:
+    image: nextcloud
+    container_name: nextcloud-app
+    restart: unless-stopped
+    networks:
+      - backend
+      - proxy_network
+    # ports:
+    #   - 8833:80
+    volumes:
+      - nextcloud_app:/var/www/html
+    depends_on:
+      - mariadb
+      - redis
+    environment:
+      - MYSQL_PASSWORD=$MYSQL_PASSWORD
+      - MYSQL_DATABASE=$MYSQL_DATABASE
+      - MYSQL_USER=$MYSQL_USER
+      - MYSQL_HOST=nextcloud-db
+      - REDIS_HOST=nextcloud-redis
+    labels:
+     - "traefik.enable=true"
+     - "traefik.docker.network=$PROXY_NETWORK"
+     - "traefik.http.routers.nextcloud.rule=Host(`$PUBLIC_HOSTNAME`)"
+     - "traefik.http.routers.nextcloud.tls=true"
+     # - "traefik.http.routers.nextcloud.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  nextcloud_db:
+  nextcloud_app:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

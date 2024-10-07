@@ -1,0 +1,74 @@
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: selfsigned
+  hosts:
+    - host: zammad.local.127.0.0.1.sslip.io
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+secrets:
+  autowizard:
+    useExisting: false
+    secretKey: autowizard
+    secretName: autowizard
+  elasticsearch:
+    useExisting: false
+    secretKey: password
+    secretName: elastic-credentials
+  postgresql:
+    useExisting: false
+    secretKey: postgresql-pass
+    secretName: zammad-postgresql-pass
+  redis:
+    useExisting: false
+    secretKey: redis-password
+    secretName: zammad-redis-pass
+
+# running zammad with more than 1 replica will need a ReadWriteMany storage volume!
+# https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+replicas: 1
+
+# can be used to add additional init containers
+initContainers: []
+  # - name: s3-restore
+  #   image: some-aws-s3-restore:latest
+  #   env:
+  #     - name: AWS_DEFAULT_REGION
+  #       value: "eu-central-1"
+  #     - name: AWS_ACCESS_KEY_ID
+  #       value: "xxxxxxxxxxxx"
+  #     - name: AWS_SECRET_ACCESS_KEY
+  #       value: "xxxxxxxxxxxx"
+  #     - name: SYNC_DIR
+  #       value: "/opt/zammad"
+  #     - name: AWS_SYNC_BUCKET
+  #       value: "some-backup-bucket"
+  #   volumeMounts:
+  #     - name: help-zammad
+  #       mountPath: /opt/zammad
+
+# can be used to add additional containers / sidecars
+sidecars: []
+  # - name: s3-backup
+  #   image: some-aws-s3-backup:latest
+  #   env:
+  #     - name: AWS_DEFAULT_REGION
+  #       value: "eu-central-1"
+  #     - name: AWS_ACCESS_KEY_ID
+  #       value: "xxxxxxxxxxxx"
+  #     - name: AWS_SECRET_ACCESS_KEY
+  #       value: "xxxxxxxxxxxx"
+  #     - name: SYNC_DIR
+  #       value: "/opt/zammad"
+  #     - name: AWS_SYNC_BUCKET
+  #       value: "some-backup-bucket"
+  #     - name: AWS_SYNC_SCHEDULE
+  #       value: "0 * * * *"
+  #   volumeMounts:
+  #     - name: help-zammad
+  #       mountPath: /opt/zammad

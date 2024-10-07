@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oods
+  namespace: my-oods
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: my-oods-onlyoffice-headers@kubernetescrd
+spec:
+  rules:
+    - host: oods.local.127.0.0.1.sslip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name:  oods
+                port:
+                  number: 80
+  tls: []

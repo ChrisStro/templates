@@ -1,0 +1,29 @@
+- Networking:
+    - My First Service:
+        href: http://localhost/
+        description: Homepage is awesome
+
+- Security:
+    - Bitwarden:
+        icon: bitwarden.png
+        href: https://bitwarden.com/
+        description: Popular Password Manager
+    - wazuh:
+        icon: https://wazuh.com/uploads/2024/01/platform-overview-cover.png
+        href: https://wazuh.com/
+        description: Free Open Source SIEM
+
+- Automation:
+    - My Second Service:
+        href: http://localhost/
+        description: Homepage is the best
+
+- Cloud Apps:
+    - NextCloud:
+        icon: nextcloud-blue.png
+        href: https://nextcloud.com/
+        description: Private Webcloud
+    - mailcow:
+        icon: mailcow.png
+        href: https://mailcow.email/
+        description: dockerized mailserver

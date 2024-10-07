@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paperless-ngx-db
+  labels:
+    app: paperless-ngx-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: paperless-ngx-db
+  template:
+    metadata:
+      labels:
+        app: paperless-ngx-db
+    spec:
+      containers:
+        - name: paperless-ngx-db
+          image: docker.io/library/postgres
+          ports:
+            - containerPort: 5432
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: paperless-ngx-db-cm
+            - secretRef:
+                name: paperless-ngx-db-secret
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc

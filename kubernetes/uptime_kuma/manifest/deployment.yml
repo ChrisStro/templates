@@ -1,0 +1,58 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: uptimekuma-pvc
+  namespace: my-uptimekuma
+spec:
+  accessModes:
+    - ReadWriteOnce
+  # storageClassName: local-path
+  resources:
+    requests:
+      storage: 100Mi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: uptimekuma
+  namespace: my-uptimekuma
+  labels:
+    app: uptimekuma
+spec:
+  replicas: 1
+  selector:
+   matchLabels:
+    app: uptimekuma
+  template:
+   metadata:
+    labels:
+     app: uptimekuma
+   spec:
+    containers:
+     - name: uptimekuma
+       image: louislam/uptime-kuma
+       ports:
+       - containerPort: 3001
+       volumeMounts:
+       - name: uptimekuma-storage
+         mountPath: /app/data
+    volumes:
+    - name: uptimekuma-storage
+      persistentVolumeClaim:
+        claimName: uptimekuma-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: uptimekuma-svc
+  namespace: my-uptimekuma
+spec:
+  selector:
+    app: uptimekuma
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3001

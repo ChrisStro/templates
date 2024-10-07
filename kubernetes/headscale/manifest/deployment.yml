@@ -1,0 +1,135 @@
+# headscale
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: headscale-pvc
+  namespace: my-headscale
+spec:
+  accessModes:
+  # - ReadWriteOnce
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headscale
+  namespace: my-headscale
+  labels:
+    app: headscale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: headscale
+  template:
+    metadata:
+      labels:
+        app: headscale
+        # networking/allow-internet-access: "true"
+    spec:
+        initContainers:
+        - name: init-config
+          image: busybox:1.28
+          command: [ 'sh', '/init_config.sh' ]
+          envFrom:
+            - configMapRef:
+                name: headscale-cm
+          volumeMounts:
+            - name:  headscale-files
+              mountPath:  /init_config.sh
+              subPath: init_config.sh
+            - name:  headscale-files
+              mountPath:  /config.yaml.tmpl
+              subPath: config.yaml.tmpl
+            - name:  headscale-files
+              mountPath:  /etc/headscale/acl.yaml
+              subPath: acl.yaml
+            - name: headscale-storage
+              mountPath: /etc/headscale
+              subPath: config
+            - name: headscale-storage
+              mountPath: /var/lib/headscale
+              subPath: data
+            - name: headscale-storage
+              mountPath: /var/run/headscale
+              subPath: run
+        containers:
+        - name: headscale
+          image: headscale/headscale:latest
+          # image: headscale/headscale:latest-debug # debug image
+          command: [ 'headscale', 'serve']
+          resources: {}
+          ports:
+            - containerPort: 8080
+            # We using coturn as STUN Server
+            # - containerPort: 3478
+            #   protocol: UDP
+          volumeMounts:
+            - name:  headscale-files
+              mountPath:  /etc/headscale/acl.yaml
+              subPath: acl.yaml
+            - name: headscale-storage
+              mountPath: /etc/headscale/
+              subPath: config
+            - name: headscale-storage
+              mountPath: /var/lib/headscale/
+              subPath: data
+            - name: headscale-storage
+              mountPath: /var/run/headscale/
+              subPath: run
+        restartPolicy: Always
+        volumes:
+          - name: headscale-files
+            configMap:
+              name: headscale-files-cm
+              defaultMode: 0555 # needed for execution
+          - name: headscale-storage
+            persistentVolumeClaim:
+              claimName: headscale-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: headscale
+ namespace: my-headscale
+spec:
+  clusterIP: None
+  selector:
+    app: headscale
+  ports:
+    - protocol: TCP
+      port: 8080
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: headscale-metrik
+ namespace: my-headscale
+spec:
+  clusterIP: None
+  selector:
+    app: headscale
+  ports:
+    - protocol: TCP
+      port: 9090
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: headscale-grpc
+ namespace: my-headscale
+spec:
+  clusterIP: None
+  selector:
+    app: headscale
+  ports:
+    - protocol: TCP
+      port: 50443

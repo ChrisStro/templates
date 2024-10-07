@@ -1,0 +1,34 @@
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: signal
+spec:
+  replicas: 1
+  serviceName: signal
+  selector:
+    matchLabels:
+      app: signal
+  template:
+    metadata:
+      labels:
+        app: signal
+    spec:
+      containers:
+        - name: signal
+          image: netbirdio/signal
+          ports:
+            - name: signal
+              containerPort: 80
+          volumeMounts:
+            - name: signal-storage
+              mountPath: /var/lib/netbird
+  volumeClaimTemplates:
+    - metadata:
+        name: signal-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 512Mi

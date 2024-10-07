@@ -1,0 +1,14 @@
+- op: replace
+  path: /kind
+  value: Deployment
+- op: remove
+  path: /spec/serviceName
+- op: remove
+  path: /spec/volumeClaimTemplates
+- op: add
+  path: /spec/template/spec/volumes
+  value:
+    - name: solr-data
+      hostPath:
+        path: /mnt/pool-raidz2/application-persistent-data/docspell/solr
+        type: Directory

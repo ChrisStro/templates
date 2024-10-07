@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: cf-access
+  name: cf-access
+  namespace:  my-cloudflared
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      pod: cf-access
+  template:
+    metadata:
+      labels:
+        pod: cf-access
+    spec:
+      containers:
+        - name: cf-access
+          image: cloudflare/cloudflared:latest
+          ports:
+            - containerPort: 8888
+          resources: {}
+          args:
+            - access
+            - tcp
+            - -url 0.0.0.0:8888
+            - -hostname $TUNNEL_HOSTNAME
+          envFrom:
+            - configMapRef:
+                name: cf-access-cm
+            - secretRef:
+                name: cf-access-secret
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: cf-access
+  namespace: my-cloudflared
+spec:
+  selector:
+    app: cf-access
+  ports:
+    - port: 8888

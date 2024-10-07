@@ -1,0 +1,61 @@
+initContainers:
+  - name: velero-plugin-for-csi
+    image: velero/velero-plugin-for-csi:v0.6.0
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.8.0
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+
+configuration:
+  backupStorageLocation:
+  - name: default
+    provider: aws
+    bucket: velero
+    accessMode: ReadWrite
+    credential:
+      # name of the secret used by this backupStorageLocation.
+      name:
+      # name of key that contains the secret data to be used.
+      key:
+    config:
+      region: minio
+      s3ForcePathStyle: true
+      s3Url: http://MYS3TARGET:9000 # prefer https for production
+      publicUrl:
+      insecureSkipTLSVerify: false
+
+  volumeSnapshotLocation:
+  - name: default
+    # provider is the name for the volume snapshot provider.
+    provider: aws
+    credential:
+      # name of the secret used by this volumeSnapshotLocation.
+      name:
+      # name of key that contains the secret data to be used.
+      key:
+    # Additional provider-specific configuration. See link above
+    # for details of required/optional fields for your provider.
+    config:
+      region: minio
+      s3ForcePathStyle: true
+      s3Url: http://MYS3TARGET:9000 # prefer https for production
+      publicUrl:
+      insecureSkipTLSVerify: false
+
+  features: EnableCSI
+  # Set true for backup all pod volumes without having to apply annotation on the pod when used file system backup Default: false.
+  defaultVolumesToFsBackup: true
+
+# Whether to create backupstoragelocation crd, if false => do not create a default backup location
+backupsEnabled: true
+# Whether to create volumesnapshotlocation crd, if false => disable snapshot feature
+snapshotsEnabled: true
+
+# Whether to deploy the node-agent daemonset.
+deployNodeAgent: false

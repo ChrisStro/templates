@@ -1,0 +1,23 @@
+services:
+  offen-backup:
+    image: offen/docker-volume-backup:v2
+    container_name: offen-volume-backup
+    environment:
+      BACKUP_COMPRESSION: "gz"
+      BACKUP_FILENAME: "backup-%Y-%m-%dT%H-%M-%S.{{ .Extension }}"
+      BACKUP_RETENTION_DAYS: "7"
+      BACKUP_PRUNING_PREFIX: "backup-"
+      BACKUP_EXCLUDE_REGEXP: '\.log$'
+    env_file:
+      - stack.env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - unifi_unifi_data:/backup/unifi:ro
+      - teleport_data:/backup/teleport:ro
+
+volumes:
+  unifi_unifi_data:
+    external: true
+  teleport_data:
+    external: true

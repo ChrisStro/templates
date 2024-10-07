@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: docspell
+namespace: my-docspell
+resources:
+- deployment.yml
+- service.yml
+- ingress.yml
+- postgres.yml
+- solr.yml
+- netpol.yml
+- namespace.yml
+configMapGenerator:
+- literals:
+  - DOCSPELL_SERVER_BACKEND_JDBC_USER=dbuser
+  - DOCSPELL_SERVER_BACKEND_SIGNUP_MODE=closed # closed, open, invite
+  name: restserver-config
+- literals:
+  - DOCSPELL_JOEX_JDBC_USER=dbuser
+  name: joex-config
+secretGenerator:
+- literals:
+  - DOCSPELL_SERVER_BACKEND_JDBC_PASSWORD=dbpass
+  - DOCSPELL_SERVER_ADMIN__ENDPOINT_SECRET=admin123
+  - DOCSPELL_SERVER_AUTH_SERVER__SECRET=mysecret
+  - DOCSPELL_SERVER_INTEGRATION__ENDPOINT_HTTP__HEADER_HEADER__VALUE=integration-password123
+  # If mode == 'invite', a password must be provided to generate
+  # invitation keys. It must not be empty.
+  - DOCSPELL_SERVER_BACKEND_SIGNUP_NEW__INVITE__PASSWORD=""
+  # - DOCSPELL_SERVER_BACKEND_SIGNUP_INVITE__TIME="3 days"
+  name: restserver-secrets
+- literals:
+  - DOCSPELL_JOEX_JDBC_PASSWORD=dbpass
+  name: joex-secrets
+images:
+  - name: docspell/restserver
+    newTag: latest
+  - name: docspell/joex
+    newTag: latest
+  - name: docspell/dsc
+    newTag: latest
+  - name: solr
+    newTag: "9"
+  - name: postgres
+    newTag: "15.2"

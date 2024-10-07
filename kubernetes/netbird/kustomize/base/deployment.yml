@@ -1,0 +1,130 @@
+# dashboard
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          #image: wiretrustee/dashboard
+          image: netbirdio/dashboard:main
+          ports:
+            - containerPort: 80
+          command: ["sh", "-c"]
+          args:
+            - |
+              export NETBIRD_MGMT_API_ENDPOINT=https://$NETBIRD_DOMAIN:443
+              export NETBIRD_MGMT_GRPC_API_ENDPOINT=https://$NETBIRD_DOMAIN:443
+              /usr/bin/supervisord -c /etc/supervisord.conf
+          envFrom:
+            - configMapRef:
+                name: netbird-cm
+            - secretRef:
+                name: netbird-secrets
+          env:
+            - name: AUTH_AUTHORITY
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_AUTH_AUTHORITY
+            - name: AUTH_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_AUTH_CLIENT_ID
+            - name: AUTH_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_AUTH_CLIENT_ID
+            - name: AUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: netbird-secrets
+                  key: NETBIRD_AUTH_CLIENT_SECRET
+            - name: USE_AUTH0
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_USE_AUTH0
+            - name: AUTH_SUPPORTED_SCOPES
+              valueFrom:
+                configMapKeyRef:
+                  name: netbird-cm
+                  key: NETBIRD_AUTH_SUPPORTED_SCOPES
+            - name: AUTH_REDIRECT_URI
+              value: /auth
+            - name: AUTH_SILENT_REDIRECT_URI
+              value: /silent-auth
+            - name: LETSENCRYPT_DOMAIN
+              value: none
+            - name: NETBIRD_DISABLE_LETSENCRYPT
+              value: "true"
+            - name:  NGINX_SSL_PORT
+              value: "443"
+          resources:
+            limits:
+              cpu: '1'
+              memory: 1Gi
+            requests:
+              cpu: '0.5'
+              memory: 512Mi
+
+# coturn
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: coturn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coturn
+  template:
+    metadata:
+      labels:
+        app: coturn
+    spec:
+      hostNetwork: true
+      containers:
+        - name: coturn
+          image: coturn/coturn
+          # https://github.com/netbirdio/netbird/blob/main/infrastructure_files/turnserver.conf.tmpl
+          args:
+            - --user=$TURN_USER:$TURN_PASSWORD
+            - --min-port=$TURN_MIN_PORT
+            - --max-port=$TURN_MAX_PORT
+            - --listening-port=3478
+            - --tls-listening-port=5349
+            - --cert=/etc/coturn/certs/cert.pem
+            - --pkey=/etc/coturn/private/privkey.pem
+            - --lt-cred-mech
+            - --realm=wiretrustee.com
+            - --log-file=stdout
+            - --no-cli
+            - --fingerprint
+            - --lt-cred-mech
+            - --no-software-attribute
+            - --pidfile="/var/tmp/turnserver.pid"
+            # - --verbose
+          envFrom:
+            - configMapRef:
+                name: coturn-cm
+          resources:
+            limits:
+              cpu: '1'
+              memory: 1Gi
+            requests:
+              cpu: '0.5'
+              memory: 512Mi

@@ -1,0 +1,192 @@
+# docker compose run --rm --cap-add IPC_LOCK boundary database init -config /boundary/config.hcl
+services:
+  boundary-config:
+    image: busybox
+    container_name: boundary-config
+    command:
+      - sh
+      - -c
+      - >
+        cat > /boundary/config.hcl << EOF
+
+        disable_mlock = true
+
+        controller {
+          name = "docker-controller"
+          description = "A boundary controller inside docker"
+          database {
+            url = "env://BOUNDARY_POSTGRES_URL"
+          }
+          public_cluster_addr = "cluster.$SAN_DOMAIN"
+        }
+
+        listener "tcp" {
+          address     = "0.0.0.0:9200"
+          purpose     = "api"
+          tls_disable = true
+        }
+
+        listener "tcp" {
+          address     = "0.0.0.0:9201"
+          purpose     = "cluster"
+          tls_disable = true
+        }
+
+        worker {
+          public_addr         = "worker.$SAN_DOMAIN"
+          name                = "docker-worker"
+          description         = "A default worker inside docker"
+          initial_upstreams   = ["boundary:9201"]
+          tags {
+              type   = ["location", "boundary-controller"]
+          }
+        }
+        listener "tcp" {
+          address       = "0.0.0.0:9202"
+          purpose       = "proxy"
+          tls_disable   = true
+        }
+
+        kms "aead" {
+          purpose   = "root"
+          aead_type = "aes-gcm"
+          key       = "$BOUNDARY_GLOBAL_KEY"
+          key_id    = "global_root"
+        }
+
+        kms "aead" {
+          purpose   = "worker-auth"
+          aead_type = "aes-gcm"
+          key       = "$BOUNDARY_WORKER_KEY"
+          key_id    = "global_worker-auth"
+        }
+
+        kms "aead" {
+          purpose   = "recovery"
+          aead_type = "aes-gcm"
+          key       = "$BOUNDARY_RECOVERY_KEY"
+          key_id    = "global_recovery"
+        }
+
+        EOF
+
+        [[ $BOUNDARY_DEBUG == "true" ]] && cat /boundary/config.hcl || echo "Hide output of config.hcl"
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      - boundary_config:/boundary/
+  postgres:
+    image: postgres:11
+    container_name: postgres
+    restart: unless-stopped
+    depends_on:
+      boundary-config:
+        condition: service_completed_successfully
+    networks:
+      - backend
+    environment:
+      - TZ=Europe/Berlin
+      - POSTGRES_DB=boundary
+      - POSTGRES_USER=$BOUNDARY_DB_USER
+      - POSTGRES_PASSWORD=$BOUNDARY_DB_PWD
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U postgres
+      interval: 3s
+      timeout: 5s
+      retries: 5
+  boundary-db-init:
+    image: hashicorp/boundary:latest
+    container_name: boundary-db-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint:
+      - sh
+      - -c
+      - >
+        [ -f /boundary/init_done.flag ] && echo "Init already done" || {
+         /usr/local/bin/docker-entrypoint.sh database init -config /boundary/config.hcl; touch /boundary/init_done.flag
+        }
+    volumes_from:
+      - boundary-config
+    environment:
+      - TZ=Europe/Berlin
+      - BOUNDARY_GLOBAL_KEY=$BOUNDARY_GLOBAL_KEY
+      - BOUNDARY_WORKER_KEY=$BOUNDARY_WORKER_KEY
+      - BOUNDARY_RECOVERY_KEY=$BOUNDARY_RECOVERY_KEY
+      - BOUNDARY_POSTGRES_URL=postgresql://${BOUNDARY_DB_USER}:${BOUNDARY_DB_PWD}@postgres/boundary?sslmode=disable
+      #- HOSTNAME=$SAN_DOMAIN
+    cap_add:
+      - IPC_LOCK
+  boundary:
+    image: hashicorp/boundary:latest
+    pull_policy: always
+    container_name: boundary
+    restart: unless-stopped
+    depends_on:
+      boundary-db-init:
+        condition: service_completed_successfully
+    networks:
+      - proxy_network
+      - backend
+    # ports:
+    #   - 9200:9200
+    #   - 9201:9201
+    #   - 9202:9202
+    environment:
+      - TZ=Europe/Berlin
+      - BOUNDARY_GLOBAL_KEY=$BOUNDARY_GLOBAL_KEY
+      - BOUNDARY_WORKER_KEY=$BOUNDARY_WORKER_KEY
+      - BOUNDARY_RECOVERY_KEY=$BOUNDARY_RECOVERY_KEY
+      - BOUNDARY_POSTGRES_URL=postgresql://${BOUNDARY_DB_USER}:${BOUNDARY_DB_PWD}@postgres/boundary?sslmode=disable
+      - HOSTNAME=$SAN_DOMAIN
+    volumes_from:
+      - boundary-config
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -O-
+        - http://boundary:9200
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    labels:
+      # WebUI
+      - traefik.enable=true
+      - traefik.docker.network=$PROXY_NETWORK
+      - traefik.http.routers.boundary-ui.rule=Host(`ui.$SAN_DOMAIN`)
+      - traefik.http.routers.boundary-ui.entrypoints=websecure
+      - traefik.http.routers.boundary-ui.service=boundary-ui
+      - traefik.http.services.boundary-ui.loadbalancer.server.port=9200
+      # Control Plane
+      - traefik.tcp.routers.boundary-cluster.rule=HostSNI(`cluster.$SAN_DOMAIN`)
+      - traefik.tcp.routers.boundary-cluster.entrypoints=websecure
+      - traefik.tcp.routers.boundary-cluster.tls=true
+      - traefik.tcp.routers.boundary-cluster.tls.passthrough=true
+      - traefik.tcp.routers.boundary-cluster.service=boundary-cluster
+      - traefik.tcp.services.boundary-cluster.loadbalancer.server.port=9201
+      # Worker
+      - traefik.tcp.routers.boundary-worker.rule=HostSNI(`worker.$SAN_DOMAIN`)
+      - traefik.tcp.routers.boundary-worker.entrypoints=websecure
+      - traefik.tcp.routers.boundary-worker.tls=true
+      - traefik.tcp.routers.boundary-worker.tls.passthrough=true
+      - traefik.tcp.routers.boundary-worker.service=boundary-worker
+      - traefik.tcp.services.boundary-worker.loadbalancer.server.port=9202
+
+volumes:
+  boundary_config: null
+  postgres_data: null
+
+networks:
+  backend: null
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

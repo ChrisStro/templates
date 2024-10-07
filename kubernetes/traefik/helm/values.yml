@@ -1,0 +1,26 @@
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+    allowExternalNameServices: true
+
+ports:
+  websecure:
+    tls:
+      enabled: true # IMPORTANT WHEN USING EXTERNAL SERVICES/ENDPOINTS
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+
+# Important to forward real visitor ip to traefik
+service:
+  spec:
+    externalTrafficPolicy: Local
+
+additionalArguments:
+- "--serverstransport.insecureskipverify=true"
+# add addtional entrypoint to prevent exposing internal applications
+# DNAT from 443 to 444 on firewall/router
+# - "--entrypoints.outside.address=:444/tcp"
+# - "--entrypoints.outside.http.tls=true"

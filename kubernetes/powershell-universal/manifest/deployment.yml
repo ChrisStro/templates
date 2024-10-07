@@ -1,0 +1,61 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: psuniversal-pvc
+  namespace: my-psuniversal
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: psuniversal
+  namespace: my-psuniversal
+  labels:
+    app: psuniversal
+    networking/allow-external: "true" # if external communication is needed
+spec:
+  replicas: 1
+  selector:
+   matchLabels:
+    app: psuniversal
+  template:
+   metadata:
+    labels:
+     app: psuniversal
+   spec:
+    containers:
+     - name: psuniversal
+       image: ironmansoftware/universal
+       ports:
+         - containerPort: 5000
+       resources: {}
+       envFrom:
+        - configMapRef:
+            name: psuniversal-cm
+       volumeMounts:
+       - name: psuniversal-storage
+         mountPath: /home/data
+    volumes:
+    - name: psuniversal-storage
+      persistentVolumeClaim:
+        claimName: psuniversal-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: psuniversal-svc
+  namespace: my-psuniversal
+spec:
+  selector:
+    app: psuniversal
+  ports:
+    - protocol: TCP
+      port: 5000

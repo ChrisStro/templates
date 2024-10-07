@@ -1,0 +1,24 @@
+- Developer:
+  - Github:
+    - icon: github.png
+      href: https://github.com/
+      description: Versioning source code platform
+  - Base64Converter:
+      - abbr: BASE64
+        href: www.base64decode.org
+        description: Online base64 encoding/decoding
+
+- Social:
+  - Reddit:
+    - icon: reddit.png
+      href: https://reddit.com/
+      description: The front page of the internet
+  - X:
+    - icon: https://cdn.icon-icons.com/icons2/4029/PNG/512/twitter_x_new_logo_x_rounded_icon_256078.png
+      href: https://twitter.com/
+      description: The "new" Twitter
+
+- Entertainment:
+  - YouTube:
+      - abbr: YT
+        href: https://youtube.com/

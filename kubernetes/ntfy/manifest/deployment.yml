@@ -1,0 +1,67 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ntfy-app-pvc
+  namespace: my-ntfy
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: ntfy
+  namespace: my-ntfy
+spec:
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      containers:
+      - name: ntfy
+        image: binwiederhier/ntfy
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        args: ["serve"]
+        envFrom:
+         - configMapRef:
+             name: ntfy-app-cm
+        volumeMounts:
+          - name: ntfy-server-config
+            mountPath: "/etc/ntfy"
+            readOnly: true
+          - name: ntfy-app-storage
+            mountPath: /var/cache/ntfy # cache volume mounted to persistent volume
+      volumes:
+        - name: ntfy-server-config
+          configMap:
+            name: ntfy-config-cm
+        - name: ntfy-app-storage # stores /cache/ntfy in defined pv
+          persistentVolumeClaim:
+            claimName: ntfy-app-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: ntfy
+  namespace: my-ntfy
+spec:
+  selector:
+    app: ntfy
+  ports:
+  - port: 80
+    targetPort: 80

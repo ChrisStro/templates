@@ -1,0 +1,21 @@
+roles: kube,app
+authToken: <AUTHTOKEN>
+proxyAddr: tp.<DOMAINNAME>:443
+kubeClusterName: <CLUSTERNAME>
+labels:
+    platform: kubernetes
+# hostAliases:
+# - ip: "1.2.3.4"
+#   hostnames:
+#     - "tp.<DOMAINNAME>.de"
+apps:
+- name: placeholder
+  uri: http://webapp.my-namespace.svc.cluster.local
+# - name: longhorn-<CLUSTERNAME>
+#   uri: http://longhorn-frontend.my-longhorn.svc.cluster.local
+#   insecure_skip_verify: yes
+#   public_addr: longhorn.tp.<DOMAINNAME>
+# - name: traefik-<CLUSTERNAME>
+#   uri: http://traefik-dashboard.my-traefik.svc.cluster.local:9000/dashboard/#
+#   insecure_skip_verify: yes
+#   public_addr: traefik.tp.<DOMAINNAME>

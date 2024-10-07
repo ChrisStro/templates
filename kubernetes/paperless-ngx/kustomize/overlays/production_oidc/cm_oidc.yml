@@ -1,0 +1,24 @@
+# https://docs.paperless-ngx.com/advanced_usage/#openid-connect-and-social-authentication
+# The OpenID Connect callback URL for each configured server is at /accounts/oidc/{id}/login/callback/ where {id} is the configured app’s provider_id value
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: paperless-ngx-app-oidc-cm
+  namespace: my-paperless-ngx
+data:
+  PAPERLESS_SOCIALACCOUNT_PROVIDERS: |-
+    {
+      "openid_connect": {
+        "OAUTH_PKCE_ENABLED": true,
+        "APPS": [
+          {
+            "provider_id": "zitadel",
+            "name": "My OIDC PROVIDER",
+            "client_id": "my_client_id",
+            "settings": {
+              "server_url": "https://my.auth.server/.well-known/openid-configuration"
+            }
+          }
+        ]
+      }
+    }

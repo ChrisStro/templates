@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: netbird
+namespace: my-netbird
+resources:
+- deployment.yml
+- signal.yml
+- management.yml
+- service.yml
+- ingress.yml
+- configmap.yml
+- namespace.yml
+images:
+  - name: wiretrustee/dashboard
+    newTag: latest
+  - name: netbirdio/signal
+    newTag: latest
+  - name: netbirdio/management
+    newTag: latest
+  - name: coturn/coturn
+    newTag: latest

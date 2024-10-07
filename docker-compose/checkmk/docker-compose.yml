@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  check-mk:
+    image: "checkmk/check-mk-raw:2.2.0-latest"
+    # image: checkmk/check-mk-cloud:2.2.0p7 # free/trial
+    container_name: "checkmk"
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    ports:
+      - "8880:5000" # ui (needed for distributed monitoring)
+      - "8000:8000" # agent
+      - "6557:6557" # for distributed monitoring --> und omd config <site> inside container
+    tmpfs:
+      - /opt/omd/sites/cmk/tmp:uid=1000,gid=1000
+    environment:
+      # - MAIL_RELAY_HOST=mailrelay.example.com
+      - CMK_SITE_ID=$CMK_SITE_ID
+      - CMK_LIVESTATUS_TCP=on
+      - CMK_PASSWORD=$CMK_PASSWORD
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - cmk_data:/omd/sites
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.checkmk.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.checkmk.entrypoints=websecure"
+      # - "traefik.http.routers.checkmk.tls=true"
+      - "traefik.http.services.checkmk.loadbalancer.server.port=5000"
+      # - "traefik.http.routers.checkmk.tls.certresolver=cf-production" # when using tlsChallenge certresolver
+
+volumes:
+  cmk_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

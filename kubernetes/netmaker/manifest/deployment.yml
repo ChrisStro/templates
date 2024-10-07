@@ -1,0 +1,391 @@
+# coredns
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: netmaker-dnsconfig-pv-coredns
+  namespace: my-netmaker
+spec:
+  capacity:
+    storage: 128Mi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  local:
+    path: /srv/netmaker/nm-dnsconfig-pvc
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - REPLACE_KUBEHOSTNAME
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: netmaker-dnsconfig-pvc-coredns
+  namespace: my-netmaker
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 128Mi
+  volumeName: netmaker-dnsconfig-pv-coredns
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netmaker-coredns
+  namespace: my-netmaker
+  labels:
+    app: netmaker-coredns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netmaker-coredns
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: netmaker-coredns
+        networking/allow-internet-access: "true"
+    spec:
+      containers:
+        - name: netmaker-coredns
+          image: coredns/coredns
+          args: ['-conf','/root/dnsconfig/Corefile']
+          volumeMounts:
+            - mountPath: /root/dnsconfig
+              name: dnsconfig-storage
+          ports:
+          - containerPort: 53
+            name: dns
+            protocol: UDP
+          - containerPort: 53
+            name: dns-tcp
+            protocol: TCP
+      restartPolicy: Always
+      volumes:
+        - name: dnsconfig-storage
+          persistentVolumeClaim:
+            claimName: netmaker-dnsconfig-pvc-coredns
+
+---
+# MQTT
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mosquitto-pvc
+  namespace: my-netmaker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 128Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netmaker-mq
+  namespace: my-netmaker
+  labels:
+    app: netmaker-mq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netmaker-mq
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: netmaker-mq
+    spec:
+      containers:
+        - name: netmaker-mq
+          image: eclipse-mosquitto:2.0.15-openssl
+          ports:
+          - containerPort: 1883
+            name: mqtt-local
+          - containerPort: 8883
+            name: mqtt-broker
+          args: ['/mosquitto/config/wait.sh']
+          env:
+            - name: MQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: netmaker-mq-secret
+                  key: MQ_PASSWORD
+            - name: MQ_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mosquitto-cm
+                  key: MQ_USERNAME
+          volumeMounts:
+            - name: mosquitto-conf
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+            - name: mosquitto-conf
+              mountPath: /mosquitto/config/wait.sh
+              subPath: wait.sh
+            - name: mosquitto-storage
+              mountPath: /mosquitto/log
+      restartPolicy: Always
+      volumes:
+        - name: mosquitto-conf
+          configMap:
+            name: mosquitto-cm
+            defaultMode: 0744
+        - name: mosquitto-storage
+          persistentVolumeClaim:
+            claimName: mosquitto-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netmaker-mq
+  namespace: my-netmaker
+  labels:
+    app: netmaker-mq
+spec:
+  ports:
+  - port: 8883
+    name: mqtt-broker
+    protocol: TCP
+  - port: 1883
+    name: mqtt-local
+    protocol: TCP
+  selector:
+    app: netmaker-mq
+  sessionAffinity: None
+  type: ClusterIP
+
+
+# netmaker
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: netmaker-dnsconfig-pv-nm
+  namespace: my-netmaker
+spec:
+  capacity:
+    storage: 128Mi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-path
+  local:
+    path: /srv/netmaker/nm-dnsconfig-pvc
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - csk3s
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: netmaker-dnsconfig-pvc-nm
+  namespace: my-netmaker
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 128Mi
+  volumeName: netmaker-dnsconfig-pv-nm
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: netmaker-db-pvc
+  namespace: my-netmaker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netmaker
+  namespace: my-netmaker
+  labels:
+    app: netmaker
+spec:
+  selector:
+    matchLabels:
+      app: netmaker
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: netmaker
+        networking/allow-internet-access: "true"
+    spec:
+      initContainers:
+        - name: init-sysctl
+          image: busybox
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["sysctl -w net.ipv4.ip_forward=1 && sysctl -w net.ipv4.conf.all.src_valid_mark=1 && sysctl -w net.ipv6.conf.all.disable_ipv6=0 && sysctl -w net.ipv6.conf.all.forwarding=1"]
+          securityContext:
+            privileged: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: netmaker
+        image: gravitl/netmaker:latest
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 8081
+            name: netmaker
+          - containerPort: 3478
+            name: stun
+            protocol: UDP
+        # securityContext:
+        #   privileged: true
+        #   capabilities:
+        #     add:
+        #     - NET_ADnetmaker-cmMIN
+        env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: MQ_USERNAME
+            valueFrom:
+              configMapKeyRef:
+                name: mosquitto-cm
+                key: MQ_USERNAME
+          - name: MQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: netmaker-mq-secret
+                key: MQ_PASSWORD
+        envFrom:
+          - configMapRef:
+              name: netmaker-cm
+          - configMapRef:
+              name: netmaker-oauth
+          - secretRef:
+              name: netmaker-nm-secret
+        volumeMounts:
+          - name: netmaker-dnsconfig-storage-nm
+            mountPath: /root/config/dnsconfig
+          - name: netmaker-db-storage
+            mountPath: /root/data
+      volumes:
+        - name: netmaker-dnsconfig-storage-nm
+          persistentVolumeClaim:
+            claimName: netmaker-dnsconfig-pvc-nm
+        - name: netmaker-db-storage
+          persistentVolumeClaim:
+            claimName: netmaker-db-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netmaker-api
+  namespace: my-netmaker
+  labels:
+    app: netmaker
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8081
+    protocol: TCP
+  selector:
+    app: netmaker
+  sessionAffinity: None
+
+# nodeports for own stun service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netmaker-stun
+  namespace: my-netmaker
+spec:
+  type: NodePort
+  ports:
+    - port: 3478
+      protocol: UDP
+      targetPort: 3478
+  selector:
+    app: netmaker
+
+
+# netmaker-ui
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netmaker-ui
+  namespace: my-netmaker
+  labels:
+    app: netmaker-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netmaker-ui
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: netmaker-ui
+    spec:
+      containers:
+        - name: netmaker-ui
+          image: gravitl/netmaker-ui:latest
+          env:
+          - name: BACKEND_URL
+            valueFrom:
+              configMapKeyRef:
+                name: netmaker-cm
+                key: BACKEND_URL
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: my-netmaker
+  labels:
+    app: netmaker-ui
+  name: netmaker-ui
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: netmaker-ui
+  sessionAffinity: None
+  type: ClusterIP

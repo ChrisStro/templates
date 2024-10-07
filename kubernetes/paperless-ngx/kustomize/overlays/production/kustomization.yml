@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: paperless-ngx
+namespace: my-paperless-ngx
+resources:
+- ../../base
+configMapGenerator:
+- name: paperless-ngx-app-cm
+  behavior: merge
+  # Enter your public url
+  literals:
+  -  PAPERLESS_URL=https://paperless.20.20.20.20.sslip.io
+secretGenerator:
+- name: paperless-ngx-db-secret
+  behavior: merge
+  literals:
+  - POSTGRES_PASSWORD=paperless
+patches:
+- target:
+    name: paperless-ngx-app
+    kind: Ingress
+  # Enter your public uri
+  patch: |-
+    - op: replace
+      path: /spec/rules/0/host
+      value: paperless.20.20.20.20.sslip.io

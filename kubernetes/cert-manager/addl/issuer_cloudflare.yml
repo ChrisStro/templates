@@ -1,0 +1,48 @@
+# cloudflare issuer
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cf-dns-api-token
+  namespace: cert-manager
+type: Opaque
+stringData:
+  api-token: your-api-token-with-scopes
+
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cf-production
+spec:
+  acme:
+    email: notifyme@example.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: cf-production-issuer-account-key
+    solvers:
+    - dns01:
+        cloudflare:
+          email: my-cloudflare-acc@example.com
+          apiTokenSecretRef:
+            name: cf-dns-api-token
+            key: api-token
+
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cf-staging
+spec:
+  acme:
+    email: notifyme@example.com
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: cf-staging-issuer-account-key
+    solvers:
+    - dns01:
+        cloudflare:
+          email: my-cloudflare-acc@example.com
+          apiTokenSecretRef:
+            name: cf-dns-api-token
+            key: api-token

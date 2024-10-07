@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  traefik:
+    image: "traefik/whoami"
+    container_name: "whoami"
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.whoami.rule=Host(`$PUBLIC_HOSTNAME`)"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

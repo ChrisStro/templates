@@ -1,0 +1,18 @@
+# Configure file-store as document-store
+# - op: add
+#   path: /spec/template/spec/containers/0/envFrom/4
+#   value:
+#     configMapRef:
+#       name: filestore-cm
+# - op: add
+#   path: /spec/template/spec/volumes
+#   value:
+#     - name: file-data
+#       hostPath:
+#         path: /mnt/pool-raidz2/application-persistent-data/docspell/docs
+#         type: Directory
+# - op: add
+#   path: /spec/template/spec/containers/0/volumeMounts
+#   value:
+#     - name: file-data
+#       mountPath: /mnt/docs

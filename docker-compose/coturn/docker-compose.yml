@@ -1,0 +1,72 @@
+---
+version: '3'
+
+services:
+  coturn:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    domainname: $PUBLIC_HOSTNAME
+    ports:
+    ## STUN/TURN
+    #- "3478:3478"
+    - "3478:3478/udp"
+    #- "3479:3479"
+    #- "3479:3479/udp"
+    #- "80:80"
+    #- "80:80/udp"
+    ## STUN/TURN SSL
+    #- "5349:5349"
+    #- "5349:5349/udp"
+    #- "5350:5350"
+    #- "5350:5350/udp"
+    #- "443:443"
+    #- "443:443/udp"
+    # Relay Ports
+    #- "49152-65535:49152-65535"
+    - "$TURN_MIN_PORT-$TURN_MAX_PORT:$TURN_MIN_PORT-$TURN_MAX_PORT/udp"
+    command:
+      - --user=$TURN_USER:$TURN_PASSWORD
+      - --min-port=$TURN_MIN_PORT
+      - --max-port=$TURN_MAX_PORT
+      - --listening-port=3478
+      - --tls-listening-port=5349
+      - --cert=/etc/coturn/certs/cert.pem
+      - --pkey=/etc/coturn/private/privkey.pem
+      - --lt-cred-mech
+      - --realm=wiretrustee.com
+      - --log-file=stdout
+      - --no-cli
+      - --web-admin
+      - --web-admin-ip=0.0.0.0
+      - --web-admin-port=8080
+      - --fingerprint
+      - --lt-cred-mech
+      - --no-software-attribute
+      - --pidfile="/var/tmp/turnserver.pid"
+      #- --verbose
+    volumes:
+      - coturn_data:/mnt:ro
+    #  - ./privkey.pem:/etc/coturn/private/privkey.pem:ro
+    #  - ./cert.pem:/etc/coturn/certs/cert.pem:ro
+    environment:
+      - TZ=Europe/Berlin
+      - TURN_USER=$TURN_USER
+      - TURN_PASSWORD=$TURN_PASSWORD
+      - TURN_MIN_PORT=$TURN_MIN_PORT
+      - TURN_MAX_PORT=$TURN_MAX_PORT
+    labels:
+      - "traefik.enable=$TURNUI_ENABLED"
+      - "traefik.http.routers.coturn-ui.tls=true"
+      - "traefik.http.routers.coturn-ui.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.coturn-ui.entrypoints=websecure"
+      - "traefik.http.routers.coturn-ui.service=coturn-ui"
+      - "traefik.http.services.coturn-ui.loadbalancer.server.port=8080"
+      - "traefik.http.services.coturn-ui.loadbalancer.server.scheme=https"
+
+volumes:
+  coturn_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

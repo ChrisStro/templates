@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  filebrowser:
+    image: hurlenko/filebrowser
+    container_name: filebrowser
+    restart: unless-stopped
+    user: "${UID}:${GID}"
+    networks:
+      - proxy_network
+    ports:
+      - 443:8080
+    volumes:
+      - /DATA_DIR:/data
+      - data:/config
+    environment:
+      - FB_BASEURL=/filebrowser
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.filebrowser.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.filebrowser.tls=true"
+
+volumes:
+  data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

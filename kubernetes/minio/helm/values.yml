@@ -1,0 +1,41 @@
+mode: standalone
+auth:
+  rootUser: admin
+  rootPassword: ""
+  forcePassword: false
+defaultBuckets: "velero, longhorn"
+disableWebUI: false
+
+hostAliases: []
+ingress:
+  enabled: true
+  ingressClassName: ""
+  hostname: m-ui.public.public.sslip.io
+  annotations: {}
+  tls: true
+  selfSigned: false
+
+apiIngress:
+  enabled: true
+  ingressClassName: ""
+  hostname: m.public.public.sslip.io
+  servicePort: minio-api
+  tls: true
+
+networkPolicy:
+  enabled: false
+  allowExternal: true
+  extraFromClauses: []
+  ## Example
+  ## extraFromClauses:
+  ## - podSelector:
+  ##     matchLabels:
+  ##       a: b
+
+persistence:
+  enabled: true
+  storageClass: "storage-class-minio"
+  mountPath: /bitnami/minio/data
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi

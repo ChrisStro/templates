@@ -1,0 +1,35 @@
+# create rnd password --> openssl rand -base64 32
+version: "3"
+
+services:
+  budibase:
+    restart: unless-stopped
+    image: budibase/budibase:latest
+    networks:
+      - proxy_network
+    # ports:
+    #   - "8088:80"
+    environment:
+      CUSTOM_DOMAIN: "$PUBLIC_HOSTNAME"
+      JWT_SECRET: $JWT_SECRET # openssl rand -base64 32
+      MINIO_ACCESS_KEY: $MINIO_ACCESS_KEY
+      MINIO_SECRET_KEY: $MINIO_SECRET_KEY
+      REDIS_PASSWORD: $REDIS_PASSWORD
+      COUCHDB_USER: couchdbadmin
+      COUCHDB_PASSWORD: $COUCHDB_PASSWORD
+      INTERNAL_API_KEY: $INTERNAL_API_KEY
+    volumes:
+      - budibase_data:/data
+    labels:
+     - "traefik.enable=true"
+     - "traefik.http.routers.budibase.rule=Host(`$PUBLIC_HOSTNAME`)"
+     - "traefik.http.routers.budibase.entrypoints=websecure"
+     # - "traefik.http.routers.budibase.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  budibase_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

@@ -1,0 +1,54 @@
+version: '2'
+
+services:
+  db:
+    image: mariadb:10.1
+    container_name: mariadb
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+      MYSQL_USER: $FR_DB_USER
+      MYSQL_PASSWORD: $FR_DB_PASS
+      MYSQL_DATABASE: $FR_DB_NAME
+    volumes:
+      - filerun_db:/var/lib/mysql
+
+  filerun:
+    image: filerun/filerun
+    container_name: filerun
+    restart: unless-stopped
+    networks:
+      - backend
+      - proxy_network
+    # ports:
+      # - "80:80"
+    depends_on:
+      - db
+    volumes:
+      - filerun_html:/var/www/html
+      - filerun_userfiles:/user-files
+    environment:
+      FR_DB_HOST: db
+      FR_DB_PORT: 3306
+      FR_DB_NAME: $FR_DB_NAME
+      FR_DB_USER: $FR_DB_USER
+      FR_DB_PASS: $FR_DB_PASS
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.filerun.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.filerun.tls=true"
+      # - "traefik.http.routers.filerun.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  filerun_db:
+  filerun_html:
+  filerun_userfiles:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

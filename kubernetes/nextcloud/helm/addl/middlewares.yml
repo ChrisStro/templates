@@ -1,0 +1,40 @@
+---
+# Redirect to https
+kind: Middleware
+apiVersion: traefik.containo.us/v1alpha1
+metadata:
+  name: nextcloud-redirect-https
+  namespace: my-nextcloud
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+
+---
+kind: Middleware
+apiVersion: traefik.containo.us/v1alpha1
+metadata:
+  name: nextcloud-headers
+  namespace: my-nextcloud
+spec:
+  headers:
+    browserXssFilter: true
+    contentTypeNosniff: true
+    frameDeny: true
+    sslRedirect: true
+    forceSTSHeader: true
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 15552000
+    customFrameOptionsValue: SAMEORIGIN
+
+---
+kind: Middleware
+apiVersion: traefik.containo.us/v1alpha1
+metadata:
+  name: nextcloud-dav
+  namespace: my-nextcloud
+spec:
+  replacePathRegex:
+    regex: ^/.well-known/ca(l|rd)dav
+    replacement: /remote.php/dav/

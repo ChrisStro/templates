@@ -1,0 +1,133 @@
+# app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-app
+  namespace: my-keycloak
+  labels:
+    app: keycloak-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-app
+  template:
+    metadata:
+      labels:
+        app: keycloak-app
+    spec:
+      initContainers:
+      - name: wait-for-sql
+        image: busybox:latest
+        imagePullPolicy: IfNotPresent
+        command: ['sh', '-c', 'until nc -vz ${DB_SVC} 3306; do echo "Waiting for sql..."; sleep 3; done;']
+        env:
+          - name: DB_SVC
+            value: keycloak-db-svc
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:legacy
+        # image: quay.io/keycloak/keycloak:latest
+        command: ['sh', '-c', '/opt/jboss/tools/docker-entrypoint.sh']
+        ports:
+          - containerPort: 8080
+        resources: {}
+        env:
+          - name: PROXY_ADDRESS_FORWARDING
+            value: "true"
+          - name: DB_VENDOR
+            value: MYSQL
+          - name: DB_ADDR
+            value: keycloak-db-svc
+          - name: DB_DATABASE
+            valueFrom:
+              configMapKeyRef:
+                name: keycloak-db-cm
+                key:  MYSQL_DATABASE
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: keycloak-db-cm
+                key:  MYSQL_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: keycloak-db-secret
+                key:  MYSQL_PASSWORD
+        envFrom:
+          - configMapRef:
+              name: keycloak-app-cm
+          - secretRef:
+              name: keycloak-app-secret
+      restartPolicy: Always
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: keycloak-app-svc
+ namespace: my-keycloak
+spec:
+  clusterIP: None
+  selector:
+    app: keycloak-app
+  ports:
+    - protocol: TCP
+      port: 8080
+
+# db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-db
+  namespace: my-keycloak
+  labels:
+    app: keycloak-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-db
+  template:
+    metadata:
+      labels:
+        app: keycloak-db
+    spec:
+      containers:
+        - name: keycloak-db
+          image: mysql/mysql-server:8.0.32-1.2.11-server
+          ports:
+            - containerPort: 3306
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: keycloak-db-cm
+            - secretRef:
+                name: keycloak-db-secret
+          volumeMounts:
+            - name: keycloak-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: keycloak-storage
+          persistentVolumeClaim:
+            claimName: keycloak-db-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: keycloak-db-svc
+ namespace: my-keycloak
+spec:
+  clusterIP: None
+  selector:
+    app: keycloak-db
+  ports:
+    - protocol: TCP
+      port: 3306

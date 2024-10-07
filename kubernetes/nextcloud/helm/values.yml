@@ -1,0 +1,99 @@
+# Number of replicas to be deployed
+replicaCount: 1
+
+ingress:
+  enabled: true
+  # className: nginx
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: my-nextcloud-nextcloud-redirect-https@kubernetescrd,my-nextcloud-nextcloud-headers@kubernetescrd,my-nextcloud-nextcloud-dav@kubernetescrd
+    cert-manager.io/cluster-issuer: selfsigned
+  labels: {}
+  path: /
+  pathType: Prefix
+
+# prevent http redirect from pod
+phpClientHttpsFix:
+  enabled: true
+  protocol: https
+
+nextcloud:
+  host: nextcloud.local.127.0.0.1.sslip.io
+  username: admin
+  password: changeme
+
+  # For example, to use S3 as primary storage
+  # ref: https://docs.nextcloud.com/server/13/admin_manual/configuration_files/primary_storage.html#simple-storage-service-s3
+  #
+  configs:
+    # s3.config.php: |-
+    #   <?php
+    #   $CONFIG = array (
+    #     'objectstore' => array(
+    #       'class' => '\\OC\\Files\\ObjectStore\\S3',
+    #       'arguments' => array(
+    #         'bucket'     => 'my-bucket',
+    #         'autocreate' => true,
+    #         'key'        => 'xxx',
+    #         'secret'     => 'xxx',
+    #         'region'     => 'us-east-1',
+    #         'use_ssl'    => true
+    #       )
+    #     )
+    #   );
+    # custom.config.php: |-
+    #   <?php
+    #   $CONFIG = array (
+    #     'overwriteprotocol' => 'https',
+    #     'overwrite.cli.url' => 'https://drive.example.com',
+    #     'filelocking.enabled' => 'true',
+    #     'loglevel' => '2',
+    #     'enable_previews' => true,
+    #     'trusted_domains' =>
+    #        [
+    #         'nextcloud',
+    #         'drive.example.com'
+    #        ]
+    #   );
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: 'changeme'
+
+cronjob:
+  enabled: true
+  annotations: {}
+  curlInsecure: false
+  failedJobsHistoryLimit: 5
+  image: {}
+  schedule: '*/5 * * * *'
+  successfulJobsHistoryLimit: 2
+
+internalDatabase:
+  enabled: false
+  name: nextcloud
+
+externalDatabase:
+  enabled: false
+  type: mysql
+  host:
+  user: nextcloud
+  password:
+  database: nextcloud
+  existingSecret:
+    enabled: false
+    # secretName: nameofsecret
+    # usernameKey: db-username
+    # passwordKey: db-password
+
+mariadb:
+  enabled: true
+
+  auth:
+    database: nextcloud
+    username: nextcloud
+    password: changeme
+
+  architecture: standalone

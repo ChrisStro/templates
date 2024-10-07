@@ -1,0 +1,38 @@
+# aescrypt_keygen -p 'PASSWORD' KEYFILE
+# aescrypt -d -k KEYFILE DUPLICATI-FILE.zip.aes
+
+---
+version: "2.1"
+
+services:
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    networks:
+      - proxy_network
+    # ports:
+      # - 8200:8200
+    volumes:
+      - duplicati_config:/config
+      - duplicati_backups:/backups
+      - /var/lib/docker/volumes:/docker_volumes
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/Berlin
+      - CLI_ARGS= #optional
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duplicati.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.duplicati.entrypoints=websecure"
+      # - "traefik.http.routers.duplicati.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  duplicati_config:
+  duplicati_backups:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

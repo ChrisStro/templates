@@ -1,0 +1,90 @@
+---
+kind: Certificate
+apiVersion: cert-manager.io/v1
+metadata:
+  name: traefik-san-local-cert
+  namespace: my-traefik
+spec:
+  secretName: traefik-san-local-cert
+  issuerRef:
+    # name: cf-production
+    # name: cf-staging
+    name: selfsigned
+    kind: ClusterIssuer
+  commonName: "*.local.127.0.0.1.sslip.io" # optional
+  dnsNames:
+    - "*.local.127.0.0.1.sslip.io"
+    - "local.127.0.0.1.sslip.io"
+
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: traefik-dashboard-secret
+  namespace: my-traefik
+type: kubernetes.io/basic-auth
+stringData:
+  username: User
+  password: TopPassword
+
+---
+kind: Middleware
+apiVersion: traefik.containo.us/v1alpha1
+metadata:
+  name: traefik-dashboard-auth
+  namespace: my-traefik
+spec:
+  basicAuth:
+    secret: traefik-dashboard-secret
+
+---
+kind: Middleware
+apiVersion: traefik.containo.us/v1alpha1
+metadata:
+  name: traefik-dashboard-rewrite
+  namespace: my-traefik
+spec:
+  addPrefix:
+    prefix: /dashboard
+
+---
+kind: Middleware
+apiVersion: traefik.containo.us/v1alpha1
+metadata:
+  name: redirect-https
+  namespace: my-traefik
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+
+---
+kind: IngressRoute
+apiVersion: traefik.containo.us/v1alpha1
+metadata:
+  name: traefik-dashboard-secure
+  namespace: my-traefik
+spec:
+  entryPoints:
+    - websecure
+    - web
+  routes:
+  - match: Host(`traefik.local.127.0.0.1.sslip.io`)
+    kind: Rule
+    services:
+    - name: api@internal
+      kind: TraefikService
+    middlewares:
+    - name: traefik-dashboard-auth
+    - name: traefik-dashboard-rewrite
+    - name: redirect-https
+  - match: Host("traefik.local.127.0.0.1.sslip.io") && PathPrefix("/api")
+    kind: Rule
+    services:
+    - name: api@internal
+      kind: TraefikService
+    middlewares:
+    - name: traefik-dashboard-auth
+    - name: redirect-https
+  tls:
+    secretName: traefik-san-local-cert

@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: docspell
+namespace: my-docspell-oidc
+resources:
+- ../../base
+configMapGenerator:
+- literals:
+  - DOCSPELL_SERVER_OPENID_0_ENABLED=true
+  - DOCSPELL_SERVER_OPENID_0_DISPLAY=Keycloak
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_PROVIDER__ID=keycloak
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_CLIENT__ID=docspell
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_SCOPE=openid profile
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_AUTHORIZE__URL=http://localhost:8080/auth/realms/home/protocol/openid-connect/auth
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_TOKEN__URL=http://localhost:8080/auth/realms/home/protocol/openid-connect/token
+  # User URL is not used when signature key is set.
+  # - DOCSPELL_SERVER_OPENID_0_PROVIDER_USER__URL=http://localhost:8080/auth/realms/home/protocol/openid-connect/userinfo
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_LOGOUT__URL=http://localhost:8080/auth/realms/home/protocol/openid-connect/logout
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_SIGN__KEY=b64:anVzdC1hLXRlc3Q=
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_SIG__ALGO=RS512
+  # The algocollective of the user is given in the access token as
+  # property `docspell_collective`.
+  - DOCSPELL_SERVER_OPENID_0_COLLECTIVE__KEY=lookup:docspell_collective
+  # The username to use for the docspell account
+  - DOCSPELL_SERVER_OPENID_0_USER__KEY=preferred_username
+  name: oidc-cm
+secretGenerator:
+- literals:
+  - DOCSPELL_SERVER_OPENID_0_PROVIDER_CLIENT__SECRET=CLIENTSECRET
+  name: oidc-secret
+patches:
+- target:
+    kind: Deployment
+    name: restserver
+  path: patch-restserver.yml
+- target:
+    kind: Namespace
+    name: my-docspell
+  path: patch-namespace.yml

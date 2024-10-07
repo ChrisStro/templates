@@ -1,0 +1,35 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: TraefikService
+metadata:
+  name: wrr1
+  namespace: default
+
+spec:
+  weighted:
+    services:
+      - name: svc1
+        port: 80
+        weight: 1
+      - name: wrr2
+        kind: TraefikService
+        weight: 1
+      - name: mirror1
+        kind: TraefikService
+        weight: 1
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: TraefikService
+metadata:
+  name: wrr2
+  namespace: default
+
+spec:
+  weighted:
+    services:
+      - name: svc2
+        port: 80
+        weight: 1
+      - name: svc3
+        port: 80
+        weight: 1

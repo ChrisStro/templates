@@ -1,0 +1,27 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard-ingressroute
+  namespace: kube-system
+spec:
+  entryPoints:
+   - web
+  routes:
+  - kind: Rule
+    match: Host("dashboard.traefik.example.com")
+    services:
+    - name: traefik-dashboard
+      port: 9000
+    middlewares:
+    # - name: traefik-dashboard-auth
+    # - name: traefik-dashboard-rewrite
+  - kind: Rule
+    match: Host("dashboard.traefik.example.com") && PathPrefix("/api")
+    services: # defaults to KubernetsService, else use -> kind: TraefikService
+    - name: traefik-dashboard
+      port: 9000
+    middlewares:
+    # - name: dashboard-auth
+  tls:
+    secretName: secretName

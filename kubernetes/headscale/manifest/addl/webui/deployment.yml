@@ -1,0 +1,77 @@
+# headsacale ui
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: headscale-ui-pvc
+  namespace: my-headscale
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headscale-ui
+  namespace: my-headscale
+  labels:
+    app: headscale-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: headscale-ui
+  template:
+    metadata:
+      labels:
+        app: headscale-ui
+    spec:
+        initContainers:
+        - name: change-ownership
+          image: busybox:1.28
+          command: [ 'chown', '-R', '1000:1000', '/data' ]
+          volumeMounts:
+            - name: headscale-ui-storage
+              mountPath: /data
+        containers:
+        - name: headscale-ui
+          image: ghcr.io/ifargle/headscale-webui:v0.6.1 # v0.6.1 stable atm
+          resources: {}
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: headscale-ui-cm
+          volumeMounts:
+            - name: headscale-ui-storage
+              mountPath: /data
+            - name: headscale-storage
+              mountPath: /etc/headscale/
+              subPath: config
+              readOnly: true
+        restartPolicy: Always
+        volumes:
+          - name: headscale-ui-storage
+            persistentVolumeClaim:
+              claimName: headscale-ui-pvc
+          - name: headscale-storage
+            persistentVolumeClaim:
+              claimName: headscale-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: headscale-ui
+ namespace: my-headscale
+spec:
+  clusterIP: None
+  selector:
+    app: headscale-ui
+  ports:
+    - protocol: TCP
+      port: 5000

@@ -1,0 +1,56 @@
+# create admin user inside synapse
+# register_new_matrix_user http://localhost:8008 -c /data/homeserver.yaml --help
+
+version: '2.3'
+services:
+  # postgres:
+  #   image: postgres:14
+  #   restart: unless-stopped
+  #   networks:
+  #     default:
+  #       ipv4_address: 10.10.10.2
+  #   volumes:
+  #    - ./postgresdata:/var/lib/postgresql/data
+
+  #   # These will be used in homeserver.yaml later on
+  #   environment:
+  #    - POSTGRES_DB=synapse
+  #    - POSTGRES_USER=synapse
+  #    - POSTGRES_PASSWORD=STRONGPASSWORD
+
+  synapse:
+    image: matrixdotorg/synapse:latest
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    environment:
+      - SYNAPSE_SERVER_NAME=$PUBLIC_HOSTNAME
+      - SYNAPSE_REPORT_STATS=yes
+    volumes:
+     - synapse:/data
+    # command: generate
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.matrix-synapse.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.matrix-synapse.entrypoints=websecure"
+      - "traefik.http.services.matrix-synapse.loadbalancer.server.port=8008"
+
+  element:
+    image: vectorim/element-web:latest
+    restart: unless-stopped
+    volumes:
+      - /opt/matrix/element-config.json:/app/config.json
+    networks:
+      - proxy_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.matrix-element.rule=Host(`element.$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.matrix-element.entrypoints=websecure"
+
+volumes:
+  synapse:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

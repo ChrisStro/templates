@@ -1,0 +1,42 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traefik-dashboard-ingress
+  namespace: kube-system
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # basic auth
+    # traefik.ingress.kubernetes.io/router.middlewares: my-traefik-traefik-dashboard-auth@kubernetescrd # namespace-middlewarename@kubernetescrdprovider
+
+    # ipwhitelist
+    # traefik.ingress.kubernetes.io/router.middlewares: my-traefik-traefik-local-ipwhitelist@kubernetescrd
+
+    # enable basic auth + rewrite
+    # traefik.ingress.kubernetes.io/router.middlewares: my-traefik-traefik-dashboard-auth@kubernetescrd,kube-system-traefik-dashboard-rewrite@kubernetescrd
+
+spec:
+  # ingressClassName : traefik
+  rules:
+  - host: dashboard.traefik.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: traefik-dashboard
+            port:
+              number: 9000
+        path: /
+        pathType: Prefix
+
+# cli
+# kubectl create ingress traefik-dashboard --rule="dashboard.traefik.example.com/*=traefik-dashboard:9000"
+# kubectl annotate ingress traefik-dashboard traefik.ingress.kubernetes.io/router.entrypoints=web
+
+# send host header via curl to validate ingress
+# curl -H 'Host: dashboard.traefik.example.com' 'http://10.43.252.53'
+
+# debug ingress
+# k -n kube-system edit deployment/traefik
+# --log.level=DEBUG
+# k -n kube-system logs deployment/traefik -f

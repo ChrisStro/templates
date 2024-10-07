@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: netbird-no-coturn
+namespace: my-netbird
+resources:
+- ../zitadel
+configMapGenerator:
+- literals:
+  - REMOTE_COTURN=coturn.public.127.0.0.1.sslip.io
+  name: coturn-domain-cm
+patches:
+- target:
+    kind: Deployment
+    name: coturn
+  path: patch-no-coturn.yml
+- target:
+    kind: StatefulSet
+    name: management
+  path: patch-coturn-domain.yml

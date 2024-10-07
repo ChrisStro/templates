@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: paperless-ngx
+namespace: my-paperless-ngx
+resources:
+- pvc.yml
+- postgres.yml
+- paperless-ngx.yml
+- redis.yml
+- service.yml
+- ingress.yml
+- namespace.yml
+- netpol.yml
+images:
+  - name: docker.io/library/postgres
+    newTag: "13"
+  - name: docker.io/library/redis
+    newTag: "6.0"
+  - name: ghcr.io/paperless-ngx/paperless-ngx
+    newTag: latest
+configMapGenerator:
+- name: paperless-ngx-db-cm
+  literals:
+  - POSTGRES_DB=paperless
+  - POSTGRES_USER=paperless
+- name: paperless-ngx-app-cm
+  literals:
+  -  PAPERLESS_URL=https://paperless.local.127.0.0.1.sslip.io
+  -  PAPERLESS_DBHOST=paperless-ngx-db
+  -  PAPERLESS_OCR_LANGUAGE=deu
+  -  PAPERLESS_REDIS=redis://paperless-ngx-redis:6379
+  -  PAPERLESS_TIME_ZONE=Europe/Berlin
+  -  USERMAP_UID="1000"
+  -  USERMAP_GID="1000"
+secretGenerator:
+- name: paperless-ngx-db-secret
+  literals:
+  # openssl rand -base64 32
+  - POSTGRES_PASSWORD=paperless

@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  mysql:
+      image: mysql:5.7
+      container_name: mysql
+      restart: unless-stopped
+      networks:
+        - backend
+      environment:
+        MYSQL_ROOT_PASSWORD: $KEYCLOAK_DB_ROOT_PW
+        MYSQL_DATABASE: $KEYCLOAK_DB_NAME
+        MYSQL_USER: $KEYCLOAK_DB_USER
+        MYSQL_PASSWORD: $KEYCLOAK_DB_PW
+      volumes:
+        - mysql_data:/var/lib/mysql
+
+  keycloak:
+      image: quay.io/keycloak/keycloak:legacy
+      container_name: keycloak
+      restart: unless-stopped
+      depends_on:
+        - mysql
+      # ports:
+      #   - 8080:8080
+      networks:
+        - proxy_network
+        - backend
+      environment:
+        DB_VENDOR: MYSQL
+        DB_ADDR: mysql
+        DB_DATABASE: $KEYCLOAK_DB_NAME
+        DB_USER: $KEYCLOAK_DB_USER
+        DB_PASSWORD: $KEYCLOAK_DB_PW
+        KEYCLOAK_USER: $KEYCLOAK_USER
+        KEYCLOAK_PASSWORD: $KEYCLOAK_PW
+        PROXY_ADDRESS_FORWARDING: true
+        KEYCLOAK_HOSTNAME: $PUBLIC_HOSTNAME
+        # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the MySQL JDBC driver documentation in order to use it.
+        #JDBC_PARAMS: "connectTimeout=30000"
+      volumes:
+        - /etc/localtime:/etc/localtime:ro
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=$PROXY_NETWORK"
+        - "traefik.http.routers.keycloak.rule=Host(`$PUBLIC_HOSTNAME`)"
+        - "traefik.http.routers.keycloak.entrypoints=websecure"
+        # - "traefik.http.routers.keycloak.tls=true"
+        # - "traefik.http.services.keycloak.loadbalancer.server.port=4433"
+        # - "traefik.http.services.keycloak.loadbalancer.server.scheme=https"
+      # - "traefik.http.routers.passbolt.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  mysql_data:
+    # external: true
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

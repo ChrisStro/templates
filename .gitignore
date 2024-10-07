@@ -1,0 +1,4 @@
+dev
+# for new teleport-cluster a template file is used
+kubernetes/teleport/helm/*/values.yml
+kubernetes/teleport/helm/*/ingress.yml

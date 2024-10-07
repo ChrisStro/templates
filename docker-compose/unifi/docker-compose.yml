@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+  unifi:
+    image: "jacobalberty/unifi:latest"
+    container_name: unifi
+    restart: unless-stopped
+    init: true
+    networks:
+      - proxy_network
+    ports:
+      # - "8443:8443" # Port used for application GUI/API as seen in a web browser.
+      - "8080:8080" # device and application communication
+      - "8880:8880" # HTTP portal redirection
+      # - "8843:8843" # HTTPS portal redirection
+      - "6789:6789" # UniFi mobile speed test
+      - "3478:3478/udp" # STUN
+      # - "10001:10001/udp" # device discovery
+      # - "1900:1900/udp" # "Make application discoverable on L2 network" in the UniFi Network settings
+    volumes:
+      - unifi_data:/unifi
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.unifi.tls=true"
+      - "traefik.http.routers.unifi.entrypoints=websecure"
+      - "traefik.http.routers.unifi.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.unifi.service=unifi"
+      - "traefik.http.services.unifi.loadbalancer.server.scheme=https"
+      - "traefik.http.services.unifi.loadbalancer.server.port=8443"
+      #- "traefik.http.routers.unifi.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+      # add extra entrypoint to your traefik container first
+      - "traefik.http.routers.unifi-guest.tls=true"
+      - "traefik.http.routers.unifi-guest.entrypoints=guestportal"
+      - "traefik.http.routers.unifi-guest.rule=Host(`$GUEST_PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.unifi-guest.service=unifi-guest"
+      - "traefik.http.services.unifi-guest.loadbalancer.server.scheme=https"
+      - "traefik.http.services.unifi-guest.loadbalancer.server.port=8843"
+      - "traefik.http.routers.unifi-guest.tls.certresolver=cf-production"
+
+volumes:
+  unifi_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

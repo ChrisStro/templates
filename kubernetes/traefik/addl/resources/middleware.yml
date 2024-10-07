@@ -1,0 +1,71 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-dashboard-auth
+  namespace: my-traefik
+spec:
+  basicAuth:
+    secret: traefik-dashboard-secret
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-dashboard-rewrite
+  namespace: my-traefik
+spec:
+  addPrefix:
+    prefix: /dashboard
+
+---
+# Redirect to https
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-headers
+  namespace: my-traefik
+spec:
+  headers:
+    frameDeny: true
+    browserXssFilter: true
+    contentTypeNosniff: true
+    forceSTSHeader: true
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 15552000
+    customFrameOptionsValue: SAMEORIGIN
+    customRequestHeaders:
+      X-Forwarded-Proto: https
+
+---
+# not working at the time with kube-vip and x-forwarded-for
+# need to add --entryPoints.web.forwardedHeaders.trustedIPs=127.0.0.1/32,192.168.1.7
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-local-ipwhitelist
+  namespace: my-traefik
+spec:
+  ipWhiteList:
+    sourceRange:
+    - 10.0.0.0/8
+    - 192.168.0.0/16
+    - 172.16.0.0/12
+    ipStrategy:
+      depth: 0
+      # excludedIPs:
+      # - 127.0.0.1/32
+      # - "192.168.5.188"
+
+# kubectl annotate ingress traefik-dashboard traefik.ingress.kubernetes.io/router.middlewares=kube-system-dashboard-auth@kubernetescrd,kube-system-dashboard-rewrite@kubernetescrd --overwrite

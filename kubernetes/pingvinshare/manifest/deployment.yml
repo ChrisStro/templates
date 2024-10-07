@@ -1,0 +1,59 @@
+## pingvinshare
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pingvinshare-pvc
+  namespace: my-pingvinshare
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: pingvinshare
+  namespace: my-pingvinshare
+  labels:
+    app: pingvinshare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pingvinshare
+  template:
+    metadata:
+      labels:
+        app: pingvinshare
+    spec:
+      containers:
+        - name: pingvinshare
+          image: stonith404/pingvin-share
+          ports:
+            - containerPort: 3000
+          resources: {}
+          volumeMounts:
+            - mountPath: /opt/app/backend/data
+              name: pingvinshare-storage
+      restartPolicy: Always
+      volumes:
+        - name: pingvinshare-storage
+          persistentVolumeClaim:
+            claimName: pingvinshare-pvc
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: pingvinshare
+ namespace: my-pingvinshare
+spec:
+  selector:
+    app: pingvinshare
+  ports:
+    - protocol: TCP
+      port: 3000

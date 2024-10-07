@@ -1,0 +1,10 @@
+- op: add
+  path: /spec/template/spec/containers/0/envFrom/2
+  value:
+    configMapRef:
+      name: oidc-cm
+- op: add
+  path: /spec/template/spec/containers/0/envFrom/3
+  value:
+    secretRef:
+      name: oidc-secret

@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  cloudflaredTunnel:
+    image: "cloudflare/cloudflared:latest"
+    container_name: cloudflaredTunnel
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    command: tunnel run
+    environment:
+    - TUNNEL_TOKEN=$TUNNEL_TOKEN
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

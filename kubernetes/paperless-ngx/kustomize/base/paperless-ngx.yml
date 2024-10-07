@@ -1,0 +1,60 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paperless-ngx-app
+  labels:
+    app: paperless-ngx-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: paperless-ngx-app
+  template:
+    metadata:
+      labels:
+        app: paperless-ngx-app
+    spec:
+      # securityContext:
+      #   runAsUser: 1000
+      #   runAsGroup: 3000
+      #   fsGroup: 2000 # user for host filesystem
+      containers:
+        - name: paperless-ngx-app
+          image: ghcr.io/paperless-ngx/paperless-ngx
+          ports:
+            - containerPort: 8000
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: paperless-ngx-app-cm
+          livenessProbe:
+            exec:
+              command:
+                - curl
+                - -fs
+                - -S
+                - --max-time
+                - "2"
+                - http://localhost:8000
+            failureThreshold: 5
+            periodSeconds: 30
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: paperless-storage
+              subPath: data
+              mountPath: /usr/src/paperless/data
+            - name: paperless-storage
+              subPath: media
+              mountPath: /usr/src/paperless/media
+            - name: paperless-storage
+              subPath: export
+              mountPath: /usr/src/paperless/export
+            - name: paperless-storage
+              subPath: consume
+              mountPath: /usr/src/paperless/consume
+      restartPolicy: Always
+      volumes:
+        - name: paperless-storage
+          persistentVolumeClaim:
+            claimName: paperless-pvc

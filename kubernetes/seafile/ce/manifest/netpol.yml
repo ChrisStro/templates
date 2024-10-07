@@ -1,0 +1,122 @@
+# default deny
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny-ingress
+  namespace: my-seafile
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny-egress
+  namespace: my-seafile
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+
+# ingress from proxy namespaces allow
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-ns-reverse-proxy
+  namespace: my-seafile
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik-system
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: my-cloudflared
+      ports:
+        - protocol: TCP
+          port: 80
+
+# allow app to db communication
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: ingress-seafile-db
+  namespace: my-seafile
+spec:
+  podSelector:
+    matchLabels:
+      app: seafile-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: seafile-app
+      ports:
+        - port: 3306
+
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: egress-seafile-app
+  namespace: my-seafile
+spec:
+  podSelector:
+    matchLabels:
+      app: seafile-app
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: seafile-db
+      ports:
+        - port: 3306
+
+# allow external https ( needed for ONLYOFFICE integration )
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-external-https
+  namespace: my-seafile
+spec:
+  podSelector:
+    matchLabels:
+      networking/allow-external-https: "true"
+  policyTypes:
+    - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+          - 10.0.0.0/8
+          - 192.168.0.0/16
+          - 172.16.0.0/20
+    ports:
+      - port: 443

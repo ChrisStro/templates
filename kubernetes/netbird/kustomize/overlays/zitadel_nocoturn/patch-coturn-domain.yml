@@ -1,0 +1,8 @@
+- op: replace
+  path: /spec/template/spec/initContainers/0/env/0
+  value:
+    name: TURN_DOMAIN
+    valueFrom:
+      configMapKeyRef:
+        name: coturn-domain-cm
+        key: REMOTE_COTURN

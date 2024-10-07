@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    volumes:
+      - "vaultwarden_data:/data"
+    environment:
+      - ADMIN_TOKEN=$ADMIN_TOKEN
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vaultwarden.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.vaultwarden.tls=true"
+      # - "traefik.http.routers.traefik.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
+
+volumes:
+  vaultwarden_data:
+    external: true # missclick = all passwords lost?!?! To be save
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

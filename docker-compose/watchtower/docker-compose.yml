@@ -1,0 +1,15 @@
+version: "3"
+services:
+  watchtower:
+    restart: unless-stopped
+    image: containrrr/watchtower
+    environment:
+      #- WATCHTOWER_DEBUG=true
+      #- WATCHTOWER_LABEL_ENABLE=true
+      #- WATCHTOWER_POLL_INTERVAL=86400 # 24 hours poll or schedule
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *
+      - WATCHTOWER_ROLLING_RESTART=true
+      - WATCHTOWER_CLEANUP=true # removes old images
+      - TZ=Europe/Berlin
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

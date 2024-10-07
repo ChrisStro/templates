@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: homepage
+namespace: my-homepage
+resources:
+- clusterrole.yml
+- clusterrolebinding.yml
+- deployment.yml
+- ingress.yml
+- namespace.yml
+- secret.yml
+- service.yml
+images:
+  - name: ghcr.io/gethomepage/homepage
+    newTag: latest
+configMapGenerator:
+- name: homepage
+  files:
+   - files/custom.js
+   - files/custom.css
+   - files/kubernetes.yaml
+   - files/settings.yaml
+   - files/bookmarks.yaml
+   - files/services.yaml
+   - files/widgets.yaml
+   - files/docker.yaml

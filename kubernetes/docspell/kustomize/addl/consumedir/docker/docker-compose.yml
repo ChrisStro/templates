@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+
+  # The consumedir container watches a directory for files to upload
+  # to docspell restserver. This uses the `dsc` tool. For information
+  # on the available options, see `dsc --help`.
+  # https://github.com/docspell/dsc
+  #
+  # The value after `Docspell-Integration` must match the secret
+  # specified at the restserver via
+  # DOCSPELL_SERVER_INTEGRATION__ENDPOINT_HTTP__HEADER_HEADER__VALUE.
+  #
+  # The --not-matches "**/.*" option is to exclude hidden files.
+  consumedir:
+    image: docspell/dsc:latest
+    container_name: docspell-consumedir
+    command:
+      - dsc
+      - "-d"
+      - "http://docspell-restserver:7880"
+      - "watch"
+      - "--delete"
+      - "-ir"
+      - "--not-matches"
+      - "**/.*"
+      - "--header"
+      - "Docspell-Integration:integration-password123"
+      - "/opt/docs"
+    restart: unless-stopped
+    volumes:
+      - ./docs:/opt/docs

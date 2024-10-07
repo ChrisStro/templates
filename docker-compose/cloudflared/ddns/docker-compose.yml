@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  cloudflareDDNS:
+    image: oznu/cloudflare-ddns:latest
+    container_name: cloudflareDDNS
+    restart: always
+    networks:
+      - backend
+    environment:
+      - API_KEY=$API_KEY
+      - ZONE=$ZONE
+      - SUBDOMAIN=$SUBDOMAIN
+      - PROXIED=false
+
+networks:
+  backend:

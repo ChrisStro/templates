@@ -1,0 +1,21 @@
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: keycloak
+  namespace: my-keycloak
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  rules:
+  - host: keycloak.127.0.0.1.sslip.io
+    http:
+     paths:
+     - path: /
+       pathType: Prefix
+       backend:
+        service:
+         name: keycloak-app-svc
+         port:
+          number: 8080
+  tls: []

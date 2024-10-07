@@ -1,0 +1,58 @@
+zitadel:
+  # You can generate it for example with tr -dc A-Za-z0-9 </dev/urandom | head -c 32
+  masterkey: x123456789012345678901234567891y
+  configmapConfig:
+    ExternalSecure: true
+    ExternalDomain: auth.127.0.0.1.sslip.io
+    ExternalPort: 443 # when behind proxy
+    # ExternalDomain: zitadel.127.0.0.1.sslip.io
+    # ExternalPort: 8080
+    # ExternalSecure: false
+    TLS:
+      Enabled: false
+    Database:
+      Postgres:
+        Host: postgresql
+        Port: 5432
+        Database: zitadel
+        MaxOpenConns: 20
+        MaxIdleConns: 10
+        MaxConnLifetime: 30m
+        MaxConnIdleTime: 5m
+        User:
+          Username: zitadel
+          SSL:
+            Mode: verify-full
+        Admin:
+          Username: postgres
+          SSL:
+            Mode: verify-full
+  secretConfig:
+    Database:
+      Postgres:
+        User:
+          Password: xyz
+        Admin:
+          Password: abc
+
+  dbSslCaCrtSecret: postgres-cert
+  dbSslAdminCrtSecret: postgres-cert
+  dbSslUserCrtSecret: zitadel-cert
+
+replicaCount: 1
+
+ingress:
+  enabled: true
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: selfsigned
+  hosts:
+    - host: auth.127.0.0.1.sslip.io
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+   - hosts:
+      - auth.127.0.0.1.sslip.io
+      - "*.auth.127.0.0.1.sslip.io"
+     secretName: auth-san-cert

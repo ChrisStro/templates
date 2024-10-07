@@ -1,0 +1,51 @@
+image:
+  #tag: "v2.10"
+  pullPolicy: IfNotPresent
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+    allowExternalNameServices: true
+
+ports:
+  websecure:
+    tls:
+      enabled: true
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+
+# Using bouncer Plugin, no bouncer container
+experimental:
+  plugins:
+    bouncer:
+      moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+      version: v1.2.1
+
+# Logs needed for crowdsec
+logs:
+  access:
+    enabled: true
+    bufferingSize: 100
+    filters:
+      statuscodes: '204-299,400-499,500-59'
+
+# Enable plugins with add args
+additionalArguments:
+- "--serverstransport.insecureskipverify=true"
+# CrowdSec stuff
+- "--entrypoints.web.http.middlewares=my-traefik-bouncer@kubernetescrd"
+- "--entrypoints.websecure.http.middlewares=my-traefik-bouncer@kubernetescrd"
+- "--providers.kubernetescrd"
+
+volumes:
+  - name: crowdsec-bouncer-tls
+    mountPath: /etc/traefik/crowdsec-certs/
+    type: secret
+
+# Important when using MetalLB or KubeVIP
+service:
+  spec:
+    externalTrafficPolicy: Local

@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+  portainer-edge-agent:
+    image: portainer/agent:latest
+    container_name: portainer_edge_agent
+    restart: always
+    networks:
+      - backend
+    links:
+      - "cf-portainer-web:$PUBLIC_WEB_URI_OVERRIDE"
+      - "cf-portainer-edge:$PUBLIC_EDGE_URI_OVERRIDE"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $DOCKER_VOLUME_PATH:/var/lib/docker/volumes # differs by distri
+      - /:/host
+      - portainer_agent_data:/data
+    environment:
+     - EDGE=1
+     - EDGE_INSECURE_POLL=1
+     - EDGE_ID=$EDGE_ID
+     - EDGE_KEY=$EDGE_KEY
+
+  cf-portainer-web:
+    image: "cloudflare/cloudflared:latest"
+    container_name: cf-portainer-web
+    restart: always
+    networks:
+      - backend
+    command: access tcp -url 0.0.0.0:9443 -hostname $PUBLIC_WEB_URI_OVERRIDE
+    environment:
+      - TUNNEL_SERVICE_TOKEN_ID=$TUNNEL_SERVICE_TOKEN_ID
+      - TUNNEL_SERVICE_TOKEN_SECRET=$TUNNEL_SERVICE_TOKEN_SECRET
+
+  cf-portainer-edge:
+    image: "cloudflare/cloudflared:latest"
+    container_name: cf-portainer-edge
+    restart: always
+    networks:
+      - backend
+    command: access tcp -url 0.0.0.0:8000 -hostname $PUBLIC_EDGE_URI_OVERRIDE
+    environment:
+      - TUNNEL_SERVICE_TOKEN_ID=$TUNNEL_SERVICE_TOKEN_ID
+      - TUNNEL_SERVICE_TOKEN_SECRET=$TUNNEL_SERVICE_TOKEN_SECRET
+
+volumes:
+  portainer_agent_data:
+    external: true
+
+networks:
+  backend:

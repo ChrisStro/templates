@@ -1,0 +1,50 @@
+# docker compose run --rm pwpush -- bash -c 'cd /opt/PasswordPusher && bin/pwpush console'
+# PasswordPusher.grant_system_admin!('user@example.com')
+services:
+  postgres:
+    image: docker.io/postgres:15
+    container_name: postgres
+    networks:
+      - backend
+    volumes:
+      - postgre_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: $POSTGRES_USER
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      POSTGRES_DB: pwpush_db
+
+  pwpush:
+    image: docker.io/pglombardo/pwpush:latest
+    container_name: pwpush
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - backend
+      - proxy_network
+    environment:
+      DATABASE_URL: 'postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@postgres:5432/pwpush_db'
+      PWP__ENABLE_LOGINS: $ENABLE_LOGINS
+      PWP__DISABLE_SIGNUPS: $DISABLE_SIGNUPS
+      PWP__DEFAULT_LOCALE: de
+      PWP__HOST_DOMAIN: $PUBLIC_HOSTNAME
+      # mail settings are needed
+      PWP__MAIL__SMTP_ADDRESS: $SMTP_SERVER
+      PWP__MAIL__SMTP_USER_NAME: $SMTP_USERNAME
+      PWP__MAIL__SMTP_PASSWORD: $SMTP_PASSWORD
+      PWP__MAIL__SMTP_ENABLE_STARTTLS_AUTO: $SMTP_STARTTLS_AUTO
+      PWP__MAIL__MAILER_SENDER: $SMTP_MAIL_FROM
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.pwpush.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.pwpush.tls=true"
+
+volumes:
+  postgre_data:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

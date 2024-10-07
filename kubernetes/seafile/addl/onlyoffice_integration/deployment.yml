@@ -1,0 +1,55 @@
+## onlyoffice app
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: onlyofficeds
+  namespace: my-seafile
+  labels:
+    app: onlyofficeds
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: onlyofficeds
+  template:
+    metadata:
+      labels:
+        app: onlyofficeds
+        networking/allow-external-https: "true"
+    spec:
+      containers:
+        - image: onlyoffice/documentserver:latest
+          name: onlyoffice
+          ports:
+            - containerPort: 80
+          resources: {}
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                configMapKeyRef:
+                  name: seafile-app-cm
+                  key: ONLYOFFICE_JWT_SECRET
+      # edit dns if needed
+      # dnsPolicy: "ClusterFirst"
+      # dnsConfig:
+      #   nameservers:
+      #     - 192.168.5.10 # this is an example
+        # searches:
+        #   - my.internal.custom.domain.local
+        #   - my.dns.search.suffix
+      restartPolicy: Always
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+ name: onlyofficeds
+ namespace: my-seafile
+spec:
+  selector:
+    app: onlyofficeds
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

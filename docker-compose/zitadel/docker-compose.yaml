@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  zitadel:
+    image: 'ghcr.io/zitadel/zitadel:latest'
+    container_name: zitadel
+    restart: 'always'
+    networks:
+      - proxy_network
+      - zitadel
+    # command: 'start-from-init --masterkey "$MASTERKEY" --tlsMode disabled'
+    command: 'start-from-init --masterkey "$MASTERKEY"'
+    environment:
+      - ZITADEL_EXTERNALDOMAIN=$PUBLIC_HOSTNAME
+      - ZITADEL_EXTERNALPORT=443
+      - ZITADEL_EXTERNALSECURE=true             # tls until proxy
+      - ZITADEL_TLS_ENABLED=false               # tls between containers
+      - ZITADEL_DATABASE_COCKROACH_HOST=crdb
+      # - ZITADEL_MASTERKEY=$ZITADEL_MASTERKEY
+    depends_on:
+      crdb:
+        condition: 'service_healthy'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.zitadel.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.zitadel.entrypoints=websecure"
+      - "traefik.http.services.zitadel.loadbalancer.server.port=8080"
+
+  crdb:
+    image: 'cockroachdb/cockroach:latest'
+    container_name: crdb
+    restart: 'always'
+    networks:
+      - 'zitadel'
+    command: 'start-single-node --insecure'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health?ready=1"]
+      interval: '10s'
+      timeout: '30s'
+      retries: 5
+      start_period: '20s'
+    volumes:
+      - crdb_data:/cockroach/cockroach-data
+      - crdb_certs:/cockroach/certs
+
+volumes:
+  crdb_data:
+  crdb_certs:
+
+networks:
+  zitadel:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

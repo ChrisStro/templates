@@ -1,0 +1,70 @@
+services:
+  headscale:
+    image: headscale/headscale:0.22.3
+    pull_policy: always
+    container_name: headscale
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    ports:
+      - 3478:3478/udp
+    command: headscale serve
+    volumes:
+      - /usr/share/headscale/config:/etc/headscale
+      - /usr/share/headscale/data:/var/lib/headscale
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.headscale.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.headscale.entrypoints=websecure"
+      - "traefik.http.services.headscale.loadbalancer.server.port=8080"
+
+  # no authentication, you need preauth
+  # headscale-admin:
+  #   image: goodieshq/headscale-admin:latest
+  #   container_name: headscale-admin
+  #   restart: unless-stopped
+  #   networks:
+  #     - proxy_network
+  #   environment:
+  #     - TZ=Europe/Berlin
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.headscale-admin.rule=Host(`$PUBLIC_HOSTNAME`) && PathPrefix(`/admin`)"
+  #     - "traefik.http.routers.headscale-admin.entrypoints=websecure"
+
+  headscale-webui:
+    image: ghcr.io/ifargle/headscale-webui:latest
+    container_name: headscale-webui
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    environment:
+      - TZ=Europe/Berlin
+      - COLOR=blue                                          # Use the base colors (ie, no darken-3, etc) -
+      - HS_SERVER=https://$PUBLIC_HOSTNAME                  # Reachable endpoint for your Headscale server
+      - DOMAIN_NAME=https://$PUBLIC_HOSTNAME                # The base domain name for this container.
+      - SCRIPT_NAME=/webui                                  # This is your applications base path (wsgi requires the name "SCRIPT_NAME").  Remove if you are hosing at the root /
+      - KEY="WtfLbZkTfA+0YxIt1piHJ2ApdSbp7uwE1LBrSiqgTUU="  # Generate with "openssl rand -base64 32" - used to encrypt your key on disk.
+      - AUTH_TYPE=Basic                                     # AUTH_TYPE is either Basic or OIDC.  Empty for no authentication
+      - LOG_LEVEL=info                                      # Log level.  "DEBUG", "ERROR", "WARNING", or "INFO".  Default "INFO"
+      # ENV for Basic Auth (Used only if AUTH_TYPE is "Basic").  Can be omitted if you aren't using Basic Auth
+      - BASIC_AUTH_USER=USER_CHANGEME                       # Used for basic auth
+      - BASIC_AUTH_PASS=PWD_CHANGEME                        # Used for basic auth
+      # ENV for OIDC (Used only if AUTH_TYPE is "OIDC").  Can be omitted if you aren't using OIDC
+      # - OIDC_AUTH_URL=https://auth.$DOMAIN/.well-known/openid-configuration # URL for your OIDC issuer's well-known endpoint
+      # - OIDC_CLIENT_ID=headscale-webui                    # Your OIDC Issuer's Client ID for Headscale-WebUI
+      # - OIDC_CLIENT_SECRET=YourSecretHere                 # Your OIDC Issuer's Secret Key for Headscale-WebUI
+    volumes:
+      - /usr/share/headscale_webui/data:/data               # Headscale-WebUI's storage.  Make sure ./volume is readable by UID 1000 (chown 1000:1000 ./volume)
+      - /usr/share/headscale/config:/etc/headscale/:ro      # Headscale's config storage location.  Used to read your Headscale config.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.headscale-ui.rule=Host(`$PUBLIC_HOSTNAME`) && PathPrefix(`/webui`)"
+      - "traefik.http.routers.headscale-ui.entrypoints=websecure"
+      # - traefik.http.services.headscale-ui.loadbalancer.server.port=8080
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

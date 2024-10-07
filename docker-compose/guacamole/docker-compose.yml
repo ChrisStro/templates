@@ -1,0 +1,90 @@
+# IMPORTANT
+# docker run --rm -v guacamole_init:/var/tmp guacamole/guacamole:1.5.0 sh -c '/opt/guacamole/bin/initdb.sh --postgres > /var/tmp/initdb.sql'
+version: '3.9'
+
+services:
+  guacd:
+    image: guacamole/guacd:1.5.0
+    container_name: guacamole_backend
+    restart: always
+    networks:
+      guacamole_net:
+    volumes:
+      - drive:/drive:rw
+      - record:/record:rw
+
+  postgres:
+    image: postgres:13.4
+    container_name: guacamole_database
+    restart: always
+    networks:
+      guacamole_net:
+    environment:
+      PGDATA: /var/lib/postgresql/data/guacamole
+      POSTGRES_DB: guacamole_db
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      POSTGRES_USER: '${POSTGRES_USER}'
+    volumes:
+      - init:/docker-entrypoint-initdb.d:ro
+      - data:/var/lib/postgresql/data:rw
+
+  guacamole:
+    image: guacamole/guacamole:1.5.0
+    container_name: guacamole_frontend
+    restart: always
+    user: "root:root"
+    depends_on:
+      - guacd
+      - postgres
+    networks:
+      - guacamole_net
+      - proxy_network
+    links:
+      - guacd
+    environment:
+      GUACD_HOSTNAME: guacd
+      POSTGRES_DATABASE: guacamole_db
+      POSTGRES_HOSTNAME: postgres
+      POSTGRES_USER: '${POSTGRES_USER}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      POSTGRESQL_AUTO_CREATE_ACCOUNTS: true
+      GUACAMOLE_HOSTNAME: https://$PUBLIC_HOSTNAME/#/
+      # TOTP_ENABLED: 'true'
+      # https://keycloak.rfa.net:8443/auth/realms/master/.well-known/openid-configuration
+      # https://guacamole.apache.org/doc/gug/openid-auth.html
+      # OPENID_AUTHORIZATION_ENDPOINT: https://keycloak.rfa.net:8443/auth/realms/master/protocol/openid-connect/auth
+      # OPENID_JWKS_ENDPOINT: https://keycloak.rfa.net:8443/auth/realms/master/protocol/openid-connect/certs
+      # OPENID_ISSUER: https://keycloak.rfa.net:8443/auth/realms/master
+      # OPENID_CLIENT_ID: guacamole
+      # OPENID_REDIRECT_URI: https://guacamole.rfa.net:8443/guacamole/#/settings/sessions
+      # OPENID_REDIRECT_URI: https://guacamole.rfa.net:8443/guacamole
+      # OPENID_CLAIM_TYPE: sub
+      # OPENID_CLAIM_TYPE: preferred_username
+      # OPENID_SCOPE: openid profile
+      # OPENID_ALLOWED_CLOCK_SKEW: 99999
+      # OPENID_MAX_TOKEN_VALIDITY: 300
+      # OPENID_MAX_NONCE_VALIDITY: 10
+    volumes:
+      - drive:/drive:rw
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.guacamole.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.guacamole.entrypoints=websecure"
+      - "traefik.http.routers.guacamole.service=guacamole"
+      - "traefik.http.routers.guacamole.middlewares=guacprefix"
+      - "traefik.http.services.guacamole.loadBalancer.server.port=8080"
+      - "traefik.http.middlewares.guacprefix.addprefix.prefix=/guacamole"
+
+volumes:
+  data:
+  drive:
+  record:
+  init:
+
+networks:
+  guacamole_net:
+    # driver: bridge
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

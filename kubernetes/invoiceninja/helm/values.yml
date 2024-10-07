@@ -1,0 +1,75 @@
+debug: false
+
+appKey: ""
+appURL: ""
+
+userEmail: "admin@example.com"
+userPassword: "CHANGEME"
+
+replicaCount: 1
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 120
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+  port: fastcgi
+
+ingress:
+  enabled: true
+  certManager: false
+  ingressClassName: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: selfsigned
+  hostname: invoiceninja.local.127.0.0.1.sslip.io
+  path: /
+  # tls: false
+  # extraHosts: []
+  # extraPaths: []
+  # extraTls: []
+  # secrets: []
+persistence:
+  public:
+    enabled: true
+    # storageClass: "-"
+    # existingClaim: your-claim
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    dataSource: {}
+
+redis:
+  enabled: false
+  auth:
+    sentinel: false
+  sentinel:
+    enabled: true
+    quorum: 1
+  replica:
+    replicaCount: 1
+
+mariadb:
+  enabled: true
+  auth:
+    rootPassword: 'EAaUbAfan2Yxg/dDw02BvVQySgg/W1ye3mlRPy10m4YapS0Y'
+    database: invoiceninja
+    username: invoiceninja
+    password: 'aW52b2ljZW5pbmph'
+externalDatabase:
+  host: ""
+  user: invoiceninja
+  password: ""
+  database: invoiceninja
+  port: 3306
+
+nginx:
+  enabled: false

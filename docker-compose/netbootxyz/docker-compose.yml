@@ -1,0 +1,40 @@
+version: '3.7'
+
+services:
+  netbootxyz:
+    restart: unless-stopped
+    image: ghcr.io/netbootxyz/netbootxyz
+    container_name: netbootxyz
+    networks:
+      - proxy_network
+    ports:
+      # - 3000:3000 # optional -> UI
+      - 69:69/udp # TFTP
+      # - 8080:80 # optional -> local assets
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+      - MENU_VERSION=2.0.47 # optional
+    volumes:
+      - config:/config # optional
+      - assets:/assets # optional
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.netboot-ui.entrypoints=websecure"
+      - "traefik.http.routers.netboot-ui.rule=Host(`$UI_HOSTNAME`)"
+      - "traefik.http.routers.netboot-ui.service=netboot-ui"
+      - "traefik.http.services.netboot-ui.loadbalancer.server.port=3000"
+      - "traefik.http.routers.netboot-assets.entrypoints=websecure"
+      - "traefik.http.routers.netboot-assets.rule=Host(`$ASSETS_HOSTNAME`)"
+      - "traefik.http.routers.netboot-assets.service=netboot-assets"
+      - "traefik.http.services.netboot-assets.loadbalancer.server.port=8080"
+
+volumes:
+  config:
+  assets:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

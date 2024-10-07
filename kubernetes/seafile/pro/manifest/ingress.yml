@@ -1,0 +1,34 @@
+# # middleware
+# apiVersion: traefik.containo.us/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: onlyofficeds-stripprefix
+#   namespace: my-seafile
+# spec:
+#   stripPrefix:
+#     prefixes:
+#       - /onlyofficeds
+
+# ingress
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: seafile
+  namespace: my-seafile
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: selfsigned
+spec:
+  rules:
+  - host: seafile.local.127.0.0.1.sslip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: seafile-app
+            port:
+              number: 80
+  tls: []

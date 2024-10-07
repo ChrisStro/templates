@@ -1,0 +1,32 @@
+persistence:
+  defaultClass: true
+  defaultFsType: ext4
+  defaultClassReplicaCount: 1 # change to 1 for single node cluster
+
+longhornUI:
+  replicas: 1 # change to 1 for single node cluster
+
+longhornConversionWebhook:
+  replicas: 1 # change to 1 for single node cluster
+
+longhornAdmissionWebhook:
+  replicas: 1 # change to 1 for single node cluster
+
+longhornRecoveryBackend:
+  replicas: 1 # change to 1 for single node cluster
+
+defaultSettings:
+  defaultReplicaCount: 1
+  # This tells Longhorn to use the 'longhorn' bucket of our S3.
+  backupTarget: s3://longhorn@dummyregion/
+  # The secret where the MinIO credentials are stored.
+  backupTargetCredentialSecret: s3-secret
+  # Usually Longhorn does not store volumes on the node that it runs on. This setting allows that.
+  replicaSoftAntiAffinity: true
+  replicaZoneSoftAntiAffinity: true
+
+# when longhorn-csi-plugin crash
+# csi:
+#   kubeletRootDir: ~
+#   kubeletRootDir: /var/lib/rancher/k3s/agent/kubelet # on k3s
+#   kubeletRootDir: /var/snap/microk8s/common/var/lib/kubelet # on microk8s

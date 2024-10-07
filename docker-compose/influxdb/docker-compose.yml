@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    # ports:
+    #   - '8086:8086'
+    networks:
+      - proxy_network
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_ADMIN_TOKEN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.influxdb.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.influxdb.tls=true"
+
+volumes:
+  influxdb-data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

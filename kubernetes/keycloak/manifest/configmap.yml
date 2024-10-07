@@ -1,0 +1,23 @@
+# app
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-app-cm
+  namespace: my-keycloak
+data:
+  KEYCLOAK_USER: ADMIN
+  KEYCLOAK_HOSTNAME: keycloak.127.0.0.1.sslip.io
+  # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the MySQL JDBC driver documentation in order to use it.
+  #JDBC_PARAMS: "connectTimeout=30000"
+
+# db
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-db-cm
+  namespace: my-keycloak
+data:
+  MYSQL_DATABASE: keycloak
+  MYSQL_USER: keycloak

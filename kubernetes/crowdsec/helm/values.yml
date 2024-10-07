@@ -1,0 +1,79 @@
+container_runtime: containerd
+tls:
+  enabled: true
+  bouncer:
+    reflector:
+      namespaces: ["my-traefik"]
+
+# config:
+#   parsers:
+#     s02-enrich:
+#       mywhitelists.yaml: |
+#         name: crowdsecurity/whitelists-mypips
+#         description: "Whitelist events from my ip addresses"
+#         whitelist:
+#           reason: "my cloud ips"
+#           ip:
+#             - "20.20.20.20"
+#             - "141.141.141.141"
+
+agent:
+  # tolerations:
+  #   - key: node-role.kubernetes.io/control-plane
+  #     operator: Equal
+  #     effect: NoSchedule
+  # Specify each pod whose logs you want to process
+  acquisition:
+    - namespace: my-traefik
+      podName: traefik-*
+      program: traefik # to find a matching parser
+  env:
+    - name: LEVEL_TRACE
+      value: "false"
+    - name: LEVEL_DEBUG
+      value: "false"
+    - name: LEVEL_INFO
+      value: "false"
+    - name: PARSERS
+      value: "crowdsecurity/cri-logs crowdsecurity/whitelists"
+    - name: COLLECTIONS
+      value: "crowdsecurity/linux crowdsecurity/traefik crowdsecurity/http-cve"
+    # When testing, allow bans on private networks
+    #- name: DISABLE_PARSERS
+    #  value: "crowdsecurity/whitelists"
+  persistentVolume:
+    config:
+      enabled: false
+  image:
+    pullPolicy: Always
+lapi:
+  # resources:
+  #   limits:
+  #     memory: 200Mi
+  #   requests:
+  #     cpu: 250m
+  #     memory: 200Mi
+  dashboard:
+    enabled: false
+    ingress:
+      host: dashboard.local
+      enabled: true
+  persistentVolume:
+    # Stores e.g. registered bouncer api keys
+    data:
+      enabled: false
+    # Stores e.g. online api credentials
+    config:
+      enabled: true
+  env:
+    # For an internal test, disable the Online API by setting 'DISABLE_ONLINE_API' to "true"
+    - name: DISABLE_ONLINE_API
+      value: "true"
+    # - name: ENROLL_KEY
+    #   value: "MY_ENROLL_KEY"
+    # - name: ENROLL_INSTANCE_NAME
+    #   value: "CLUSTER-NAME"
+    # - name: ENROLL_TAGS
+    #   value: "onkube"
+  image:
+    pullPolicy: Always
