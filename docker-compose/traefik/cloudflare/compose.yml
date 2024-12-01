@@ -1,41 +1,8 @@
-version: '3'
-
 services:
-  init_fileprovider:
-    image: busybox
-    command:
-      - sh
-      - -c
-      - |
-        cat > /fileprovider/config.yml << EOF
-        tls:
-          options:
-            default:
-              minVersion: VersionTLS12
-              cipherSuites:
-              # Recommended ciphers for TLSv1.2
-              - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-              - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-              - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
-              # Recommended ciphers for TLSv1.3
-              - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-              - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-              - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
-            tlsv13only:
-              minVersion: VersionTLS13
-        EOF
-        echo -e "\n------------final file------------\n"
-        cat /fileprovider/config.yml
-    volumes:
-      - traefik_file:/fileprovider
-
   traefik:
     image: "traefik:latest"
     container_name: "traefik"
     restart: unless-stopped
-    depends_on:
-      init_fileprovider:
-        condition: service_completed_successfully
     dns:
       - 1.1.1.1
       - 8.8.8.8
@@ -44,14 +11,12 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      # (Optional) Expose Dashboard
-      #- "8080:8080"  # Don't do this in production!
     command:
       # provider setup docker/file
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false" # Default is true
-      #- "--providers.file.filename=/file_provider.yml" # Default is true
-      #- "--providers.file.watch=true"
+      - "--providers.file.filename=/fileprovider/config.yml" # Default is true
+      - "--providers.file.watch=true"
       # Traefik settings
       - "--log.level=INFO" # level: debug, info, warning, error, critical
       - "--global.checkNewVersion=true"
@@ -69,21 +34,30 @@ services:
       - "--certificatesResolvers.cf-production.acme.dnsChallenge.provider=cloudflare"
       - "--certificatesResolvers.cf-production.acme.dnsChallenge.resolvers[0]=1.1.1.1:53"
       - "--certificatesResolvers.cf-production.acme.dnsChallenge.resolvers[1]=1.0.0.1:53"
-      # Configure entrypoints
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
+      # Configure default entrypoints
+      - "--entrypoints.web.address=:880"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:4443"
       - "--entrypoints.websecure.http.tls=true"
       - "--entrypoints.websecure.http.tls.certResolver=cf-$CF_STAGING_OR_PRODUCTION"
       - "--entrypoints.websecure.http.tls.domains[0].main=$DOMAINNAME"
       - "--entrypoints.websecure.http.tls.domains[0].sans=*.$DOMAINNAME"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Configure internal only entrypoints
+      - "--entrypoints.web-internal.address=:80"
+      - "--entrypoints.web-internal.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web-internal.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure-internal.address=:443"
+      - "--entrypoints.websecure-internal.http.tls=true"
+      - "--entrypoints.websecure-internal.http.tls.certResolver=cf-$CF_STAGING_OR_PRODUCTION"
+      - "--entrypoints.websecure-internal.http.tls.domains[0].main=$DOMAINNAME"
+      - "--entrypoints.websecure-internal.http.tls.domains[0].sans=*.$DOMAINNAME"
       # SSL Ciphers
-      - "--providers.file=true"
-      - "--providers.file.filename=/fileprovider/config.yml"
-      - "--entrypoints.websecure.http.tls.options=default"
+      - "--entrypoints.websecure.http.tls.options=default" # from fileprovider
+      - "--entrypoints.websecure-internal.http.tls.options=default" # from fileprovider
       # middlewares
       - "--entrypoints.websecure.http.middlewares=hsts-header"
+      - "--entrypoints.websecure-internal.http.middlewares=hsts-header"
       # Load example plugins
       # - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
       # - "--experimental.plugins.geoblock.version=v0.2.7"
@@ -103,16 +77,18 @@ services:
     environment:
       - CF_API_EMAIL=$CF_API_EMAIL
       - CF_DNS_API_TOKEN=$CF_DNS_API_TOKEN
+    configs:
+      - source: fileprovider
+        target: /fileprovider/config.yml
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/cloudflare
-      - traefik_file:/fileprovider
     labels:
       # https part
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-secure.service=api@internal"
-      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure-internal"
       - "traefik.http.routers.traefik-secure.rule=Host(`t.$DOMAINNAME`)"
       # important middleware
       - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
@@ -135,9 +111,28 @@ services:
       # - "traefik.http.middlewares.geoblock.plugin.geoblock.unknownCountryApiResponse=nil"
       # - "traefik.http.middlewares.geoblock.plugin.geoblock.countries[0]=DE"
 
+configs:
+  fileprovider:
+    content: |
+      tls:
+        options:
+          default:
+            minVersion: VersionTLS12
+            cipherSuites:
+            # Recommended ciphers for TLSv1.2
+            - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+            # Recommended ciphers for TLSv1.3
+            - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+          tlsv13only:
+            minVersion: VersionTLS13
+
+
 volumes:
   traefik_certs:
-  traefik_file:
 
 networks:
   proxy_network:

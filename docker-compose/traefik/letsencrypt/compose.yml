@@ -1,42 +1,8 @@
-version: '3'
-
 services:
-  # tls options currently not available as docker labels
-  init_fileprovider:
-    image: busybox
-    command:
-      - sh
-      - -c
-      - |
-        cat > /fileprovider/config.yml << EOF
-        tls:
-          options:
-            default:
-              minVersion: VersionTLS12
-              cipherSuites:
-              # Recommended ciphers for TLSv1.2
-              - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-              - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-              - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
-              # Recommended ciphers for TLSv1.3
-              - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-              - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-              - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
-            tlsv13only:
-              minVersion: VersionTLS13
-        EOF
-        echo -e "\n------------final file------------\n"
-        cat /fileprovider/config.yml
-    volumes:
-      - traefik_file:/fileprovider
-
   traefik:
     image: "traefik:latest"
     container_name: "traefik"
     restart: unless-stopped
-    depends_on:
-      init_fileprovider:
-        condition: service_completed_successfully
     dns:
       - 1.1.1.1
       - 8.8.8.8
@@ -48,20 +14,27 @@ services:
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
+      - "--providers.file=true"
+      - "--providers.file.filename=/fileprovider/config.yml"
       # Traefik settings
       - "--log.level=INFO" # level: debug, info, warning, error, critical
       - "--global.checkNewVersion=true"
       - "--global.sendAnonymousUsage=false"
       - "--serverstransport.insecureskipverify=true" # when forwarding to selfsigned
+      # Certificate resolver acme
+      - "--certificatesresolvers.letsencrypt.acme.email=$ACME_EMAIL"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      ## Remove comment on acme-staging resolver for testing
+      # - "--certificatesResolvers.letsencrypt.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory"
       # Configure entrypoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certResolver=letsencrypt"
       # SSL Ciphers
-      - "--providers.file=true"
-      - "--providers.file.filename=/fileprovider/config.yml"
-      - "--entrypoints.websecure.http.tls.options=default"
+      - "--entrypoints.websecure.http.tls.options=default" # from fileprovider
       # middlewares
       - "--entrypoints.websecure.http.middlewares=hsts-header"
       # Enable dashboard
@@ -72,22 +45,43 @@ services:
       - no-new-privileges:true
     environment:
       - ACME_EMAIL=$ACME_EMAIL
+    configs:
+      - source: fileprovider
+        target: /fileprovider/config.yml
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/letsencrypt
-      - traefik_file:/fileprovider
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.service=api@internal"
       - "traefik.http.routers.traefik.entrypoints=websecure"
       - "traefik.http.routers.traefik.rule=Host(`t.$DOMAINNAME`)"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
       # important middleware
       - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
 
+configs:
+  fileprovider:
+    content: |
+      tls:
+        options:
+          default:
+            minVersion: VersionTLS12
+            cipherSuites:
+            # Recommended ciphers for TLSv1.2
+            - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+            # Recommended ciphers for TLSv1.3
+            - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+          tlsv13only:
+            minVersion: VersionTLS13
+
 volumes:
   traefik_certs:
-  traefik_file:
 
 networks:
   proxy_network:
