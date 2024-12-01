@@ -1,6 +1,5 @@
 # run following command inside container to create first user
 # /usr/share/php/passbolt/bin/cake passbolt register_user -u <USERNAME_EMAIL> -f <FIRSTNAME> -l <LASTNAME> -r admin
-version: '3.9'
 services:
   db:
     image: mariadb:10.3

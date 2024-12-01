@@ -10,7 +10,9 @@ services:
       - proxy_network
     ports:
       - "80:80"
+      - "880:880"
       - "443:443"
+      - "4443:4443"
     command:
       # provider setup docker/file
       - "--providers.docker=true"
@@ -45,7 +47,7 @@ services:
       - "--entrypoints.websecure.http.tls.domains[0].sans=*.$DOMAINNAME"
       # Configure internal only entrypoints
       - "--entrypoints.web-internal.address=:80"
-      - "--entrypoints.web-internal.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web-internal.http.redirections.entrypoint.to=websecure-internal"
       - "--entrypoints.web-internal.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure-internal.address=:443"
       - "--entrypoints.websecure-internal.http.tls=true"

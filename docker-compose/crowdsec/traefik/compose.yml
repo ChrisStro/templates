@@ -1,5 +1,3 @@
-version: "3.4"
-
 services:
   # tls options currently not available as docker labels
   init_fileprovider:
