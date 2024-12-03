@@ -1,0 +1,28 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    # ports:
+    #   - 3000:3000
+    volumes:
+      - /opt/stacks/homepage/config:/app/config # Make sure your local config directory exists
+      # optional, for docker integrations
+      # - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      PUID: 1000 # optional, your user id
+      PGID: 1000 # optional, your group id
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.tls=true"
+      - "traefik.http.routers.homepage.entrypoints=$TRAEFIK_ENTRYPOINT"
+      - "traefik.http.routers.homepage.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
