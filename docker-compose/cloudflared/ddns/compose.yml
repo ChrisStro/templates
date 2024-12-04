@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   cloudflareDDNS:
     image: oznu/cloudflare-ddns:latest

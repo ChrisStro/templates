@@ -1,0 +1,72 @@
+services:
+  teleport:
+    # image: public.ecr.aws/gravitational/teleport:16.4.2
+    image: public.ecr.aws/gravitational/teleport-distroless:16.4.2 # if you don't need ssh support
+    container_name: teleport-agent
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    configs:
+      - source: teleport.yaml
+        target: /etc/teleport/teleport.yaml
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - data:/var/lib/teleport
+      # if you need to store ssh keys etc...
+      # - ssh_drive:/root
+
+configs:
+  teleport.yaml:
+    content: |
+      teleport:
+        nodename: docker-agent
+        data_dir: /var/lib/teleport
+        join_params:
+          token_name: enter_my_join_token
+          method: token
+        proxy_server: $DOMAINNAME:443
+        log:
+          output: stderr
+          severity: INFO
+          format:
+            output: text
+        ca_pin: sha256:ffbc....6 # copy ca pin from default agent
+        diag_addr: ""
+
+      auth_service:
+        enabled: "no"
+
+      ssh_service:
+        enabled: "yes"
+        labels:
+          customer: my_customer
+          platform: docker-agent
+
+      proxy_service:
+        enabled: "no"
+        https_keypairs: []
+        https_keypairs_reload_interval: 0s
+        acme: {}
+
+      app_service:
+        enabled: no
+        # apps:
+        # - name: "example app"
+        #   uri: "http://example-app-url"
+        #   insecure_skip_verify: true # optionaly
+        #   public_addr: "mypublicnamewospacesordashes.$DOMAINNAME" # optionaly
+        #   labels:  # optionaly
+        #     customer: my_customer
+        #     app: remotely
+        #   rewrite:  # optionaly
+        #     headers:
+        #       - "Host: my.internal.hostname"
+
+volumes:
+  data:
+#  ssh_drive:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

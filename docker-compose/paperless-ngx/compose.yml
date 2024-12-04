@@ -1,5 +1,4 @@
 # create user: sudo docker-compose run --rm paperless-ngx createsuperuser
-version: "3.4"
 services:
   db:
     image: docker.io/library/postgres:13
@@ -45,7 +44,8 @@ services:
       - ./export:/usr/src/paperless/export
       - ./consume:/usr/src/paperless/consume
     environment:
-      PAPERLESS_URL: https://$PUBLIC_HOSTNAME
+      PAPERLESS_URL: https://$PUBLIC_HOSTNAME # Enable CSRF-Verification
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: $TRUSTED_ORIGINS
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db
       PAPERLESS_TIME_ZONE: Europe/Berlin
@@ -54,6 +54,7 @@ services:
      - "traefik.enable=true"
      - "traefik.docker.network=$PROXY_NETWORK"
      - "traefik.http.routers.paperless.rule=Host(`$PUBLIC_HOSTNAME`)"
+     - traefik.http.routers.paperless.entrypoints=$TRAEFIK_ENTRYPOINTS
      - "traefik.http.routers.paperless.tls=true"
      - "traefik.http.services.paperless.loadbalancer.server.port=8000"
      # - "traefik.http.routers.paperless.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver

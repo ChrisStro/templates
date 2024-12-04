@@ -1,0 +1,75 @@
+services:
+  teleport:
+    image: public.ecr.aws/gravitational/teleport-distroless:16.4.2
+    container_name: teleport
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    configs:
+      - source: teleport.yaml
+        target: /etc/teleport/teleport.yaml
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - data:/var/lib/teleport
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.teleport-https.tls=true"
+      - "traefik.http.routers.teleport-https.entrypoints=$TRAEFIK_ENTRYPOINTS"
+      - "traefik.http.routers.teleport-https.rule=HostRegexp(`[a-z]+.$DOMAINNAME|$DOMAINNAME`)"
+      - "traefik.http.routers.teleport-https.tls.certresolver=cf-$CF_STAGING_OR_PRODUCTION"
+      - "traefik.http.routers.teleport-https.tls.domains[0].main=$DOMAINNAME"
+      - "traefik.http.routers.teleport-https.tls.domains[0].sans=*.$DOMAINNAME"
+      - "traefik.http.services.teleport.loadbalancer.server.port=3080"
+      - "traefik.http.services.teleport.loadbalancer.server.scheme=https"
+
+configs:
+  teleport.yaml:
+    content: |
+      teleport:
+        nodename: $DOMAINNAME
+        data_dir: /var/lib/teleport
+        log:
+          output: stderr
+          severity: INFO
+          format:
+            output: text
+
+      auth_service:
+        enabled: "yes"
+        listen_addr: 0.0.0.0:3025
+        proxy_listener_mode: multiplex
+        cluster_name: $DOMAINNAME
+        # enable webauthn support
+        authentication:
+          type: local
+          second_factor: on
+          webauthn:
+            rp_id: $DOMAINNAME
+        # assist:
+        #   openai:
+        #     api_token_path: /etc/teleport/openai_key
+
+      ssh_service:
+        enabled: "no"
+
+      proxy_service:
+        enabled: "yes"
+        web_listen_addr: 0.0.0.0:3080
+        public_addr: ['$DOMAINNAME:443']
+        https_keypairs: []
+        acme: {}
+
+      app_service:
+        enabled: no
+        # apps:
+        # - name: "example app"
+        #   uri: "http://example-app-url"
+        #   insecure_skip_verify: false
+
+volumes:
+  data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

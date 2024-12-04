@@ -58,8 +58,8 @@ services:
       - "--entrypoints.websecure.http.tls.options=default" # from fileprovider
       - "--entrypoints.websecure-internal.http.tls.options=default" # from fileprovider
       # middlewares
-      - "--entrypoints.websecure.http.middlewares=hsts-header"
-      - "--entrypoints.websecure-internal.http.middlewares=hsts-header"
+      - "--entrypoints.websecure.http.middlewares=hsts-header@docker"
+      - "--entrypoints.websecure-internal.http.middlewares=hsts-header@docker"
       # Load example plugins
       # - "--experimental.plugins.geoblock.modulename=github.com/PascalMinder/geoblock"
       # - "--experimental.plugins.geoblock.version=v0.2.7"
@@ -131,7 +131,6 @@ configs:
             - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
           tlsv13only:
             minVersion: VersionTLS13
-
 
 volumes:
   traefik_certs:
