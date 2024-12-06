@@ -1,6 +1,6 @@
 services:
   teleport:
-    image: public.ecr.aws/gravitational/teleport-distroless:16.4.2
+    image: public.ecr.aws/gravitational/teleport-distroless:$IMAGETAG
     container_name: teleport
     restart: unless-stopped
     networks:

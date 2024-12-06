@@ -9,31 +9,10 @@ configs:
   management.json:
     content: |
       {
-        "Stuns": [
-            {
-                "Proto": "udp",
-                "URI": "stun:$TURN_DOMAIN:3478",
-                "Username": "",
-                "Password": null
-            }
-        ],
         "Relay": {
-          "Addresses": ["rel://$NETBIRD_DOMAIN:$RELAY_PORT"],
+          "Addresses": ["rels://$RELAY_DOMAIN:443"],
           "CredentialsTTL": "24h",
           "Secret": "$RELAY_SECRET"
-        },
-        "TURNConfig": {
-            "Turns": [
-                {
-                    "Proto": "udp",
-                    "URI": "turn:$TURN_DOMAIN:3478",
-                    "Username": "$TURN_USER",
-                    "Password": "$TURN_PASSWORD"
-                }
-            ],
-            "CredentialsTTL": "12h",
-            "Secret": "secret",
-            "TimeBasedCredentials": false
         },
         "Signal": {
             "Proto": "https",
@@ -71,7 +50,7 @@ configs:
             "ZitadelClientCredentials": null
         },
         "DeviceAuthorizationFlow": {
-            "Provider": "hosted",
+            "Provider": "none",
             "ProviderConfig": {
               "Audience": "$NETBIRD_AUTH_CLIENT_ID",
               "AuthorizationEndpoint": "",

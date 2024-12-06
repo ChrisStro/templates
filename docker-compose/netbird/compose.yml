@@ -61,18 +61,21 @@ services:
     restart: unless-stopped
     networks:
       - proxy_network
-    ports:
-      - $RELAY_PORT:$RELAY_PORT
     environment:
     - NB_LOG_LEVEL=info
-    - NB_LISTEN_ADDRESS=:$RELAY_PORT
-    - NB_EXPOSED_ADDRESS=$NETBIRD_DOMAIN:$RELAY_PORT
+    - NB_LISTEN_ADDRESS=:30080
+    - NB_EXPOSED_ADDRESS=rels://$RELAY_DOMAIN:443
     - NB_AUTH_SECRET=$RELAY_SECRET
     logging:
       driver: "json-file"
       options:
         max-size: "500m"
         max-file: "2"
+    labels:
+    - traefik.enable=true
+    - traefik.http.routers.netbird-relay.entrypoints=websecure
+    - traefik.http.routers.netbird-relay.rule=Host(`$RELAY_DOMAIN`)
+    - traefik.http.services.netbird-relay.loadbalancer.server.port=30080
 
   # Management
   management:
@@ -112,31 +115,31 @@ services:
     - traefik.http.services.netbird-management.loadbalancer.server.scheme=h2c
 
   # Coturn
-  coturn:
-    image: coturn/coturn:latest
-    restart: unless-stopped
-    domainname: $NETBIRD_DOMAIN
-    ports:
-    - "3478:3478/udp"
-    - "$TURN_MIN_PORT-$TURN_MAX_PORT:$TURN_MIN_PORT-$TURN_MAX_PORT/udp"
-    command:
-    - --user=$TURN_USER:$TURN_PASSWORD
-    - --min-port=$TURN_MIN_PORT
-    - --max-port=$TURN_MAX_PORT
-    - --listening-port=3478
-    - --tls-listening-port=5349
-    - --cert=/etc/coturn/certs/cert.pem
-    - --pkey=/etc/coturn/private/privkey.pem
-    - --lt-cred-mech
-    - --realm=wiretrustee.com
-    - --log-file=stdout
-    - --no-cli
-    - --fingerprint
-    - --lt-cred-mech
-    - --no-software-attribute
-    - --pidfile="/var/tmp/turnserver.pid"
-    environment:
-    - TZ=Europe/Berlin
+  # coturn:
+  #   image: coturn/coturn:latest
+  #   restart: unless-stopped
+  #   domainname: $NETBIRD_DOMAIN
+  #   ports:
+  #   - "3478:3478/udp"
+  #   - "$TURN_MIN_PORT-$TURN_MAX_PORT:$TURN_MIN_PORT-$TURN_MAX_PORT/udp"
+  #   command:
+  #   - --user=$TURN_USER:$TURN_PASSWORD
+  #   - --min-port=$TURN_MIN_PORT
+  #   - --max-port=$TURN_MAX_PORT
+  #   - --listening-port=3478
+  #   - --tls-listening-port=5349
+  #   - --cert=/etc/coturn/certs/cert.pem
+  #   - --pkey=/etc/coturn/private/privkey.pem
+  #   - --lt-cred-mech
+  #   - --realm=wiretrustee.com
+  #   - --log-file=stdout
+  #   - --no-cli
+  #   - --fingerprint
+  #   - --lt-cred-mech
+  #   - --no-software-attribute
+  #   - --pidfile="/var/tmp/turnserver.pid"
+  #   environment:
+  #   - TZ=Europe/Berlin
 
 volumes:
   netbird-mgmt:

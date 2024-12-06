@@ -1,7 +1,7 @@
 services:
   teleport:
     # image: public.ecr.aws/gravitational/teleport:16.4.2
-    image: public.ecr.aws/gravitational/teleport-distroless:16.4.2 # if you don't need ssh support
+    image: public.ecr.aws/gravitational/teleport-distroless:$IMAGETAG # if you don't need ssh support
     container_name: teleport-agent
     restart: unless-stopped
     networks:
