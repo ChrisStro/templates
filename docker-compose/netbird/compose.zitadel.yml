@@ -1,0 +1,77 @@
+services:
+  dashboard:
+    environment:
+      - AUTH_CLIENT_SECRET=
+      - AUTH_AUDIENCE=$NETBIRD_AUTH_CLIENT_ID
+
+configs:
+  management.json:
+    content: |
+      {
+        "Relay": {
+          "Addresses": ["rels://$RELAY_DOMAIN:443"],
+          "CredentialsTTL": "24h",
+          "Secret": "$RELAY_SECRET"
+        },
+        "Signal": {
+            "Proto": "https",
+            "URI": "$NETBIRD_DOMAIN:443",
+            "Username": "",
+            "Password": null
+        },
+        "Datadir": "/var/lib/netbird/",
+        "DataStoreEncryptionKey": "$NETBIRD_DATASTORE_ENC_KEY",
+        "StoreConfig": {
+            "Engine": "$NETBIRD_STORE_CONFIG_ENGINE"
+        },
+        "HttpConfig": {
+            "Issuer": "$NETBIRD_AUTH_AUTHORITY",
+            "AuthAudience": "",
+            "AuthUserIDClaim": "",
+            "IdpSignKeyRefreshEnabled": $NETBIRD_MGMT_IDP_SIGNKEY_REFRESH,
+            "OIDCConfigEndpoint":"$NETBIRD_AUTH_AUTHORITY/.well-known/openid-configuration"
+        },
+        "IdpManagerConfig": {
+            "ManagerType": "$NETBIRD_MGMT_IDP",
+            "ClientConfig": {
+                "Issuer": "$NETBIRD_AUTH_AUTHORITY",
+                "TokenEndpoint": "$NETBIRD_AUTH_AUTHORITY/oauth/v2/token",
+                "ClientID": "$NETBIRD_IDP_MGMT_CLIENT_ID",
+                "ClientSecret": "$NETBIRD_IDP_MGMT_CLIENT_SECRET",
+                "GrantType": "client_credentials"
+            },
+            "ExtraConfig": {
+                "ManagementEndpoint":"$NETBIRD_AUTH_AUTHORITY/management/v1"
+            },
+            "Auth0ClientCredentials": null,
+            "AzureClientCredentials": null,
+            "KeycloakClientCredentials": null,
+            "ZitadelClientCredentials": null
+        },
+        "DeviceAuthorizationFlow": {
+            "Provider": "hosted",
+            "ProviderConfig": {
+              "Audience": "$NETBIRD_AUTH_CLIENT_ID",
+              "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
+              "ClientSecret": "",
+              "Scope": "openid",
+              "UseIDToken": false,
+              "RedirectURLs": null
+            }
+        },
+        "PKCEAuthorizationFlow": {
+            "ProviderConfig": {
+                "Audience": "$NETBIRD_AUTH_CLIENT_ID",
+                "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
+                "ClientSecret": "",
+                "Domain": "",
+                "Scope": "$NETBIRD_AUTH_SUPPORTED_SCOPES",
+                "RedirectURLs": [
+                  "http://localhost:53000",
+                  "https://$NETBIRD_DOMAIN/auth",
+                  "https://$NETBIRD_DOMAIN/silent-auth"
+                ],
+                "UseIDToken": false
+            }
+        }
+      }
