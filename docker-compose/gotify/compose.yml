@@ -1,0 +1,25 @@
+services:
+  gotify:
+    image: gotify/server
+    container_name: "gotify"
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    volumes:
+      - gotify_data:/app/data
+    environment:
+      GOTIFY_DEFAULTUSER_PASS: $GOTIFY_DEFAULTUSER_PASS
+      TZ: "Europe/Berlin"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gotify.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.gotify.entrypoints=websecure"
+      - "traefik.http.services.gotify.loadbalancer.server.port=80"
+
+volumes:
+  gotify_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

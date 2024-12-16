@@ -1,0 +1,31 @@
+services:
+  zoraxy:
+    image: zoraxydocker/zoraxy:latest
+    container_name: zoraxy
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ports:
+      - 80:80
+      - 443:443
+      - 8000:8000
+    volumes:
+      - zoraxy-config:/opt/zoraxy/config/
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      FASTGEOIP: $FASTGEOIP
+      ZEROTIER: $ZEROTIER
+      NOAUTH: $NOAUTH
+      MDNS: $MDNS
+
+volumes:
+  zoraxy-config:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
