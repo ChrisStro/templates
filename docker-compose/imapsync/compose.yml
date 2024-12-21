@@ -1,0 +1,20 @@
+services:
+  imapsync:
+    image: gilleslamiral/imapsync:latest
+    container_name: imapsync
+    # ports:
+    #   - '880:80'
+    command: /servimapsync
+    networks:
+      - proxy_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.imapsync.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.imapsync.tls=true"
+      - "traefik.http.routers.imapsync.service=imapsync-http"
+      - "traefik.http.services.imapsync-http.loadbalancer.server.port=80"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
