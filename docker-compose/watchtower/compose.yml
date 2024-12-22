@@ -1,0 +1,31 @@
+services:
+  watchtower:
+    restart: unless-stopped
+    image: containrrr/watchtower
+    container_name: watchtower
+    networks:
+      - proxy_network
+    environment:
+      #- WATCHTOWER_DEBUG=true
+      #- WATCHTOWER_LABEL_ENABLE=true
+      #- WATCHTOWER_POLL_INTERVAL=86400 # 24 hours poll or schedule
+      - WATCHTOWER_SCHEDULE=$WATCHTOWER_SCHEDULE
+      - WATCHTOWER_ROLLING_RESTART=true
+      - WATCHTOWER_CLEANUP=true # removes old images
+      - TZ=Europe/Berlin
+      - WATCHTOWER_HTTP_API_METRICS=$WATCHTOWER_HTTP_API_METRICS
+      - WATCHTOWER_HTTP_API_TOKEN=$WATCHTOWER_HTTP_API_TOKEN
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.watchtower-metric.tls=true"
+      - "traefik.http.routers.watchtower-metric.rule=Host(`$METRIC_HOSTNAME`)"
+      - "traefik.http.routers.watchtower-metric.entrypoints=$TRAEFIK_ENTRYPOINTS"
+      - "traefik.http.routers.watchtower-metric.service=watchtower-metric"
+      - "traefik.http.services.watchtower-metric.loadbalancer.server.port=8080"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
