@@ -1,0 +1,22 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    volumes:
+      - uptime-kuma:/app/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kuma.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.kuma.entrypoints=$PUBLIC_ENTRYPOINTS"
+      - "traefik.http.services.kuma.loadbalancer.server.port=3001"
+
+volumes:
+  uptime-kuma:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
