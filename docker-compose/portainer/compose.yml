@@ -1,0 +1,39 @@
+services:
+  portainer-ce:
+    image: portainer/portainer-ce:$IMAGE_TAG
+    container_name: portainer
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    ports:
+      - 8000:8000
+      - 9443:9443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      - "EDGE_URL=$PUBLIC_HOSTNAME"
+      - EDGE_ID=unique-edge-id
+    labels:
+      - "traefik.enable=true"
+      # web ui
+      - "traefik.http.routers.portainer-ui.tls=true"
+      - "traefik.http.routers.portainer-ui.rule=Host(`$UI_HOSTNAME`)"
+      - "traefik.http.routers.portainer-ui.entrypoints=$UI_ENTRYPOINTS"
+      - "traefik.http.routers.portainer-ui.service=portainer-ui"
+      - "traefik.http.services.portainer-ui.loadbalancer.server.port=9443"
+      - "traefik.http.services.portainer-ui.loadbalancer.server.scheme=https"
+      # tunnel server
+      - "traefik.http.routers.portainer-tunnel.tls=true"
+      - "traefik.http.routers.portainer-tunnel.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.portainer-tunnel.entrypoints=$PUBLIC_ENTRYPOINTS"
+      - "traefik.http.routers.portainer-tunnel.service=portainer-tunnel"
+      - "traefik.http.services.portainer-tunnel.loadbalancer.server.port=8000"
+
+volumes:
+  portainer_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
