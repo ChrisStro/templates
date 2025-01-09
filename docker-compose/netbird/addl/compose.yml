@@ -1,0 +1,27 @@
+services:
+  relay:
+    image: netbirdio/relay:latest
+    container_name: nb-relay
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    environment:
+    - NB_LOG_LEVEL=info
+    - NB_LISTEN_ADDRESS=:30080
+    - NB_EXPOSED_ADDRESS=rels://$RELAY_DOMAIN:443
+    - NB_AUTH_SECRET=$RELAY_SECRET
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "500m"
+        max-file: "2"
+    labels:
+    - traefik.enable=true
+    - traefik.http.routers.netbird-relay.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+    - traefik.http.routers.netbird-relay.rule=Host(`$RELAY_DOMAIN`)
+    - traefik.http.services.netbird-relay.loadbalancer.server.port=30080
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

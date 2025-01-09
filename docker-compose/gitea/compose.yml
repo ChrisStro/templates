@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
     ports:
     #   - "3000:3000"
-      - "$GITTEA_SSH_PORT:22"
+      - "${GITTEA_SSH_PORT:-2221}:22"
     networks:
       - backend
       - proxy_network
