@@ -17,7 +17,7 @@ services:
       # provider setup docker/file
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false" # Default is true
-      - "--providers.file.filename=/fileprovider/config.yml"
+      - "--providers.file.filename=/fileprovider/config.yml" # Default is true
       - "--providers.file.watch=true"
       # Traefik settings
       - "--log.level=INFO" # level: debug, info, warning, error, critical
@@ -60,6 +60,13 @@ services:
       # middlewares
       - "--entrypoints.websecure.http.middlewares=hsts-header@docker"
       - "--entrypoints.websecure-internal.http.middlewares=hsts-header@docker"
+      # crowdsec
+      - "--entrypoints.web.http.middlewares=crowdsec-bouncer@docker"
+      - "--entrypoints.websecure.http.middlewares=crowdsec-bouncer@docker,hsts-header"
+      - "--accessLog=true"
+      - "--accessLog.filePath=/var/log/crowdsec/traefik.log"
+      - "--accessLog.bufferingSize=100" # Configuring a buffer of 100 lines
+      - "--accessLog.filters.statusCodes=204-299,400-499,500-59" # Statut code to log
       # enable dashboard
       - "--api=true"
       - "--api.dashboard=$DASHBOARDENABLED"
@@ -77,17 +84,53 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_certs:/cloudflare
+      # crowdsec
+      - traefik_access_log:/var/log/crowdsec/
     labels:
-      # https part
       - "traefik.enable=true"
       - "traefik.http.routers.traefik-secure.service=api@internal"
       - "traefik.http.routers.traefik-secure.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure-internal}"
       - "traefik.http.routers.traefik-secure.rule=Host(`t.$DOMAINNAME`)"
       # important middleware
       - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
-      # - "traefik.http.middlewares.traefik-auth.basicauth.users=$BASIC_AUTH_LOGIN"
-      # - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
-      # - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
+
+  crowdsec:
+    image: crowdsecurity/crowdsec
+    container_name: crowdsec
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    # expose:
+    #   - 8080
+    environment:
+      PGID: "1000"
+      COLLECTIONS: "crowdsecurity/traefik crowdsecurity/http-cve"
+    configs:
+      - source: crowdsec_parser
+        target: /etc/crowdsec/acquis.yaml
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - traefik_access_log:/var/log/crowdsec:ro
+      - crowdsec_db:/var/lib/crowdsec/data
+      - crowdsec_config:/etc/crowdsec
+
+  crowdsec-traefik-bouncer:
+    depends_on:
+      - crowdsec
+    image: fbonalair/traefik-crowdsec-bouncer
+    container_name: bouncer-traefik
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    environment:
+      CROWDSEC_BOUNCER_API_KEY: $CROWDSEC_BOUNCER_API_KEY
+      CROWDSEC_AGENT_HOST: crowdsec:8080
+      GIN_MODE: release
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.middlewares.crowdsec-bouncer.forwardauth.address=http://bouncer-traefik:8080/api/v1/forwardAuth"
+      - "traefik.http.middlewares.crowdsec-bouncer.forwardauth.trustForwardHeader=true"
+      - "traefik.http.services.crowdsec-bouncer.loadbalancer.server.port=8080"
 
 configs:
   fileprovider:
@@ -107,9 +150,19 @@ configs:
             - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
           tlsv13only:
             minVersion: VersionTLS13
+  crowdsec_parser:
+    content: |
+      ---
+        filenames:
+          - /var/log/crowdsec/traefik.log
+        labels:
+          type: traefik
 
 volumes:
   traefik_certs:
+  traefik_access_log:
+  crowdsec_db:
+  crowdsec_config:
 
 networks:
   proxy_network:

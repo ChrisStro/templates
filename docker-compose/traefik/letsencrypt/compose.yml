@@ -55,7 +55,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure-internal}"
       - "traefik.http.routers.traefik.rule=Host(`t.$DOMAINNAME`)"
       - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
       # important middleware
