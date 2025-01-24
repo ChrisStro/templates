@@ -1,0 +1,15 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: relay
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: h2c
+spec:
+  selector:
+    app: relay
+  ports:
+    - name: relay
+      protocol: TCP
+      port: 30080
+  clusterIP: None

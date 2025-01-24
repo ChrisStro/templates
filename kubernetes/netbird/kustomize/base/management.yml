@@ -23,37 +23,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: netbird-cm
+            - configMapRef:
+                name: relay-cm
             - secretRef:
                 name: netbird-secrets
-            - configMapRef:
-                name: coturn-cm
-          env:
-            - name: TURN_DOMAIN
-              valueFrom:
-                configMapKeyRef:
-                  name: netbird-cm
-                  key: NETBIRD_DOMAIN
-            - name: NETBIRD_AUTH_PKCE_AUDIENCE
-              valueFrom:
-                configMapKeyRef:
-                  name: netbird-cm
-                  key: NETBIRD_AUTH_CLIENT_ID
-            # - name: NETBIRD_MGMT_IDP_SIGNKEY_REFRESH
-            #   value: "true"
-            # - name: NETBIRD_IDP_MGMT_EXTRA_CONFIG
-            #   value:
-            - name: NETBIRD_AUTH_PKCE_USE_ID_TOKEN
-              value: "false"
-            - name: NETBIRD_AUTH_DEVICE_AUTH_USE_ID_TOKEN
-              value: "false"
-            - name: NETBIRD_AUTH_DEVICE_AUTH_PROVIDER
-              value: "hosted"
-            - name: NETBIRD_SIGNAL_PROTOCOL
-              value: https
-            - name: NETBIRD_SIGNAL_PORT
-              value: "443"
-            - name: NETBIRD_MGMT_API_PORT
-              value: "443"
+            - secretRef:
+                name: relay-secrets
           volumeMounts:
             - name:  init-scripts
               mountPath:  /create_management-json.sh

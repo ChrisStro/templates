@@ -4,19 +4,30 @@ metadata:
   name: netbird
 namespace: my-netbird
 resources:
-- deployment.yml
+- dashboard.yml
 - signal.yml
 - management.yml
 - service.yml
 - ingress.yml
-- configmap.yml
 - namespace.yml
+# configure your netbird relay
+configMapGenerator:
+- name: relay-cm
+  literals:
+  - NB_LOG_LEVEL=info
+  - NB_EXPOSED_ADDRESS=rels://relay.public.127.0.0.1.sslip.io:443
+secretGenerator:
+- name: relay-secrets
+  literals:
+  - NB_AUTH_SECRET="openssl rand -base64 32 | sed 's/=//g'"
 images:
-  - name: wiretrustee/dashboard
+  - name: netbirdio/dashboard
     newTag: latest
   - name: netbirdio/signal
     newTag: latest
   - name: netbirdio/management
     newTag: latest
   - name: coturn/coturn
+    newTag: latest
+  - name: netbirdio/relay
     newTag: latest

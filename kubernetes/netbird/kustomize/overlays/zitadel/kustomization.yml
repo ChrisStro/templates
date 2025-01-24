@@ -5,43 +5,23 @@ metadata:
 namespace: my-netbird
 resources:
 - ../../base
+- configmap.yml
 configMapGenerator:
-- literals:
+- name: netbird-cm
+  literals:
   - NETBIRD_DOMAIN=skynet.public.127.0.0.1.sslip.io
-  - NETBIRD_MGMT_IDP=zitadel
   - NETBIRD_MGMT_DNS_DOMAIN=sky.net
-  - NETBIRD_MGMT_IDP_SIGNKEY_REFRESH=true
   - NETBIRD_DISABLE_ANONYMOUS_METRICS=true
-  - NETBIRD_STORE_CONFIG_ENGINE=sqlite # jsonfile deprecated
-  # Configure IDP with PKCE support
-  - NETBIRD_USE_AUTH0="false"
-  - NETBIRD_AUTH_AUTHORITY=https://auth.127.0.0.1.sslip.io
-  - NETBIRD_AUTH_OIDC_CONFIGURATION_ENDPOINT=https://auth.127.0.0.1.sslip.io/.well-known/openid-configuration
-  - NETBIRD_AUTH_TOKEN_ENDPOINT=https://auth.127.0.0.1.sslip.io/oauth/v2/token
-  - NETBIRD_AUTH_SUPPORTED_SCOPES=openid profile email offline_access api # check docs
-  - NETBIRD_AUTH_CLIENT_ID=248375388709912658@MYZITADEL_PROJECT #NETBIRD_AUTH_CLIENT_ID
-  # Some IDPs requires different client id and client secret for management api
-  - NETBIRD_IDP_MGMT_CLIENT_ID=netbird # service account user&secret
-  # Zitadel IDP
-  - NETBIRD_IDP_EXTRA_CONFIG='{"ManagementEndpoint":"https://auth.127.0.0.1.sslip.io/management/v1"}'
-  # Azure AD
-  #- NETBIRD_IDP_MGMT_EXTRA_CONFIG='{"GraphApiEndpoint":"https://graph.microsoft.com/v1.0","ObjectId":"YOUROBJECTID"}'
-  # add VARS
+  - NETBIRD_STORE_CONFIG_ENGINE=sqlite
+  - NETBIRD_TOKEN_SOURCE=idToken
+  - NETBIRD_AUTH_AUTHORITY=auth.127.0.0.1.sslip.io
+  - NETBIRD_AUTH_SUPPORTED_SCOPES=openid profile email offline_access api
+  - NETBIRD_AUTH_CLIENT_ID=248375388709912658@MYZITADEL_PROJECT
+  - NETBIRD_IDP_MGMT_CLIENT_ID=netbird # service account user
   - NETBIRD_MGMT_DISABLE_SINGLE_ACCOUNT_MODE=false
-  name: netbird-cm
-- literals:
-  - TURN_USER=self
-  # openssl rand -base64 32
-  - TURN_PASSWORD="ENTERRNDKEYHERE"
-  # 49152-65535 default
-  - TURN_MIN_PORT=65400 # calc 1 port / 1 relayed client
-  - TURN_MAX_PORT=65535
-  name: coturn-cm
 secretGenerator:
-- literals:
-  - NETBIRD_IDP_MGMT_CLIENT_SECRET=MYCLIENTSECRET
-  # openssl rand -base64 32
-  - NETBIRD_DATASTORE_ENC_KEY=ENTERRNDKEYHERE
-  # is required only by Google workspace.
+- name: netbird-secrets
+  literals:
+  - NETBIRD_IDP_MGMT_CLIENT_SECRET=MYCLIENTSECRET # service account secret
+  - NETBIRD_DATASTORE_ENC_KEY="openssl rand -base64 32 | sed 's/=//g'"
   - NETBIRD_AUTH_CLIENT_SECRET=""
-  name: netbird-secrets

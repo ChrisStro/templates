@@ -1,0 +1,35 @@
+# relay
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: relay
+  template:
+    metadata:
+      labels:
+        app: relay
+    spec:
+      hostNetwork: true
+      containers:
+        - name: relay
+          image: netbirdio/relay:latest
+          env:
+            - name: NB_LISTEN_ADDRESS
+              value: :30080
+          envFrom:
+            - configMapRef:
+                name: relay-cm
+            - secretRef:
+                name: relay-secrets
+          resources:
+            limits:
+              cpu: '1'
+              memory: 1Gi
+            requests:
+              cpu: '0.5'
+              memory: 512Mi
