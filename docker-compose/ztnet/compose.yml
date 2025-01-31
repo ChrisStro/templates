@@ -53,7 +53,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PWD:-postgres}
       POSTGRES_DB: ztnet
-      NEXTAUTH_URL: "http://§{PUBLIC_IP:-localhost}:3000"
+      NEXTAUTH_URL: "http://${PUBLIC_IP:-localhost}:3000"
       NEXTAUTH_SECRET: "random_secret"
       NEXTAUTH_URL_INTERNAL: "http://ztnet:3000"
     labels:
