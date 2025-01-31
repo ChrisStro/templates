@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:15.2-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PWD:-postgres}
+      POSTGRES_DB: ztnet
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  zerotier:
+    image: zyclonite/zerotier:1.14.2
+    hostname: zerotier
+    container_name: zerotier
+    restart: unless-stopped
+    ports:
+      - "9993:9993/udp"
+    networks:
+      - backend
+    volumes:
+      - zerotier:/var/lib/zerotier-one
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - ZT_OVERRIDE_LOCAL_CONF=true
+      - ZT_ALLOW_MANAGEMENT_FROM=172.31.255.0/29
+
+  ztnet:
+    image: sinamics/ztnet:latest
+    container_name: ztnet
+    restart: unless-stopped
+    networks:
+      - backend
+      - proxy_network
+    depends_on:
+      - postgres
+      - zerotier
+    links:
+      - postgres
+    working_dir: /app
+    volumes:
+      - zerotier:/var/lib/zerotier-one
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PWD:-postgres}
+      POSTGRES_DB: ztnet
+      NEXTAUTH_URL: "http://§{PUBLIC_IP:-localhost}:3000"
+      NEXTAUTH_SECRET: "random_secret"
+      NEXTAUTH_URL_INTERNAL: "http://ztnet:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.ztnet.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.ztnet.tls=true"
+      - "traefik.http.routers.ztnet.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.ztnet.loadbalancer.server.port=3000"
+
+volumes:
+  zerotier:
+  postgres-data:
+
+networks:
+  backend:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.31.255.0/29
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
