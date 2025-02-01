@@ -1,8 +1,9 @@
 services:
   dashboard:
     environment:
-      - AUTH_CLIENT_SECRET=
+      - AUTH_CLIENT_SECRET=$NETBIRD_AUTH_CLIENT_SECRET
       - AUTH_AUDIENCE=$NETBIRD_AUTH_CLIENT_ID
+      - AUTH_AUTHORITY=https://login.microsoftonline.com/$AZ_TENANT_ID/v2.0
 
 configs:
   management.json:
@@ -25,23 +26,23 @@ configs:
             "Engine": "$NETBIRD_STORE_CONFIG_ENGINE"
         },
         "HttpConfig": {
-            "Issuer": "$NETBIRD_AUTH_AUTHORITY",
-            "AuthAudience": "",
-            "AuthUserIDClaim": "",
+            "AuthAudience": "$NETBIRD_AUTH_CLIENT_ID",
+            "AuthUserIDClaim": "$NETBIRD_AUTH_USER_ID_CLAIM",
             "IdpSignKeyRefreshEnabled": $NETBIRD_MGMT_IDP_SIGNKEY_REFRESH,
-            "OIDCConfigEndpoint":"$NETBIRD_AUTH_AUTHORITY/.well-known/openid-configuration"
+            "OIDCConfigEndpoint":"https://login.microsoftonline.com/$AZ_TENANT_ID/v2.0/.well-known/openid-configuration"
         },
         "IdpManagerConfig": {
             "ManagerType": "$NETBIRD_MGMT_IDP",
             "ClientConfig": {
-                "Issuer": "$NETBIRD_AUTH_AUTHORITY",
-                "TokenEndpoint": "$NETBIRD_AUTH_AUTHORITY/oauth/v2/token",
-                "ClientID": "$NETBIRD_IDP_MGMT_CLIENT_ID",
-                "ClientSecret": "$NETBIRD_IDP_MGMT_CLIENT_SECRET",
+                "Issuer": "https://login.microsoftonline.com/$AZ_TENANT_ID/v2.0",
+                "TokenEndpoint": "https://login.microsoftonline.com/$AZ_TENANT_ID/oauth2/v2.0/token",
+                "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
+                "ClientSecret": "$NETBIRD_AUTH_CLIENT_SECRET",
                 "GrantType": "client_credentials"
             },
             "ExtraConfig": {
-                "ManagementEndpoint":"$NETBIRD_AUTH_AUTHORITY/management/v1"
+                "GraphApiEndpoint":"https://graph.microsoft.com/v1.0",
+                "ObjectId":"$AZ_OBJECT_ID"
             },
             "Auth0ClientCredentials": null,
             "AzureClientCredentials": null,
@@ -49,11 +50,12 @@ configs:
             "ZitadelClientCredentials": null
         },
         "DeviceAuthorizationFlow": {
-            "Provider": "hosted",
+            "Provider": "none",
             "ProviderConfig": {
               "Audience": "$NETBIRD_AUTH_CLIENT_ID",
+              "AuthorizationEndpoint": "",
               "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
-              "ClientSecret": "",
+              "ClientSecret": "$NETBIRD_AUTH_CLIENT_SECRET",
               "Scope": "openid",
               "UseIDToken": false,
               "RedirectURLs": null
@@ -63,7 +65,7 @@ configs:
             "ProviderConfig": {
                 "Audience": "$NETBIRD_AUTH_CLIENT_ID",
                 "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
-                "ClientSecret": "",
+                "ClientSecret": "$NETBIRD_AUTH_CLIENT_SECRET",
                 "Domain": "",
                 "Scope": "$NETBIRD_AUTH_SUPPORTED_SCOPES",
                 "RedirectURLs": [

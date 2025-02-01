@@ -12,7 +12,7 @@ Connect. NetBird creates a WireGuard-based overlay network that automatically co
 - We using merged compose files
 ```
 # azure
-docker compose -f compose.yml -f compose.azure.yml --env-file .env-azure up -d
+docker compose -f compose.yml -f ./addl/oidc/azure/compose.override.yml --env-file ./addl/oidc/azure/.env up -d
 ```
-- You can rename the env file to .env and then compose.xxx.yml to compose.override.yml, this way you can run simple 'docker compose up -d' command
+- You can merge the env files and then move compose.override.yml the same folder as compose.yml, this way you can run simple 'docker compose up -d' command
 - Update: Removed STURN and TURN config, switched to netbirds own relay server for simplicity (currently not offical support)
