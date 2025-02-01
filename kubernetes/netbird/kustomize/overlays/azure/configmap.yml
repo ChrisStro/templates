@@ -1,0 +1,91 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: init-scripts
+  labels:
+    app: netbird
+data:
+  # Scripts to create config files
+  # https://github.com/netbirdio/netbird/blob/main/infrastructure_files/management.json.tmpl
+  create_management-json.sh: |
+    #!/bin/bash
+    cat > /mnt/management.json << EOF
+    {
+      "Relay": {
+          "Addresses": ["rels://$RELAY_DOMAIN:443"],
+          "CredentialsTTL": "24h",
+          "Secret": "$NB_AUTH_SECRET"
+      },
+      "Signal": {
+          "Proto": "https",
+          "URI": "$NETBIRD_DOMAIN:443",
+          "Username": "",
+          "Password": null
+      },
+      "Datadir": "/var/lib/netbird/",
+      "DataStoreEncryptionKey": "$NETBIRD_DATASTORE_ENC_KEY",
+      "StoreConfig": {
+          "Engine": "$NETBIRD_STORE_CONFIG_ENGINE"
+      },
+      "HttpConfig": {
+          "AuthAudience": "$NETBIRD_AUTH_CLIENT_ID",
+          "AuthIssuer": "https://$NETBIRD_AUTH_AUTHORITY",
+          "AuthUserIDClaim": "",
+          "AuthKeysLocation": "https://$NETBIRD_AUTH_AUTHORITY/oauth/v2/keys",
+          "OIDCConfigEndpoint": "https://$NETBIRD_AUTH_AUTHORITY/.well-known/openid-configuration",
+          "IdpSignKeyRefreshEnabled": true,
+          "ExtraAuthAudience": ""
+      },
+      "IdpManagerConfig": {
+          "ManagerType": "zitadel",
+          "ClientConfig": {
+              "Issuer": "https://$NETBIRD_AUTH_AUTHORITY",
+              "TokenEndpoint": "https://$NETBIRD_AUTH_AUTHORITY/oauth/v2/token",
+              "ClientID": "$NETBIRD_IDP_MGMT_CLIENT_ID",
+              "ClientSecret": "$NETBIRD_IDP_MGMT_CLIENT_SECRET",
+              "GrantType": "client_credentials"
+          },
+          "ExtraConfig": {
+              "ManagementEndpoint": "https://$NETBIRD_AUTH_AUTHORITY/management/v1"
+          },
+          "Auth0ClientCredentials": null,
+          "AzureClientCredentials": null,
+          "KeycloakClientCredentials": null,
+          "ZitadelClientCredentials": null
+      },
+      "DeviceAuthorizationFlow": {
+          "Provider": "hosted",
+          "ProviderConfig": {
+            "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
+            "ClientSecret": "",
+            "Domain": "$NETBIRD_AUTH_AUTHORITY",
+            "Audience": "$NETBIRD_AUTH_CLIENT_ID",
+            "TokenEndpoint": "https://$NETBIRD_AUTH_AUTHORITY/oauth/v2/token",
+            "DeviceAuthEndpoint": "https://$NETBIRD_AUTH_AUTHORITY/oauth/v2/device_authorization",
+            "AuthorizationEndpoint": "",
+            "Scope": "openid",
+            "UseIDToken": false,
+            "RedirectURLs": null
+          }
+      },
+      "PKCEAuthorizationFlow": {
+          "ProviderConfig": {
+              "ClientID": "$NETBIRD_AUTH_CLIENT_ID",
+              "ClientSecret": "",
+              "Domain": "",
+              "Audience": "$NETBIRD_AUTH_CLIENT_ID",
+              "TokenEndpoint": "https://$NETBIRD_AUTH_AUTHORITY/oauth/v2/token",
+              "DeviceAuthEndpoint": "",
+              "AuthorizationEndpoint": "https://$NETBIRD_AUTH_AUTHORITY/oauth/v2/authorize",
+              "Scope": "$NETBIRD_AUTH_SUPPORTED_SCOPES",
+              "UseIDToken": false,
+              "RedirectURLs": [
+                "http://localhost:53000"
+              ],
+          }
+      }
+    }
+    EOF
+    echo -e "\n------------final file------------\n"
+    cat /mnt/management.json

@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: netbird
+namespace: my-netbird
+resources:
+- ../../base
+- configmap.yml
+configMapGenerator:
+- name: netbird-cm
+  literals:
+  - NETBIRD_DOMAIN=skynet.public.127.0.0.1.sslip.io
+  - NETBIRD_MGMT_DNS_DOMAIN=sky.net
+  - NETBIRD_DISABLE_ANONYMOUS_METRICS=true
+  - NETBIRD_STORE_CONFIG_ENGINE=sqlite # jsonfile deprecated
+  - NETBIRD_AUTH_AUTHORITY=auth.127.0.0.1.sslip.io
+  - NETBIRD_AUTH_SUPPORTED_SCOPES=openid profile email offline_access api # check docs
+  - NETBIRD_AUTH_CLIENT_ID=248375388709912658@MYZITADEL_PROJECT #NETBIRD_AUTH_CLIENT_ID
+  # Some IDPs requires different client id and client secret for management api
+  - NETBIRD_IDP_MGMT_CLIENT_ID=netbird # service account user&secret
+  # Azure AD
+  #- NETBIRD_IDP_MGMT_EXTRA_CONFIG='{"GraphApiEndpoint":"https://graph.microsoft.com/v1.0","ObjectId":"YOUROBJECTID"}'
+  # add VARS
+  - NETBIRD_MGMT_DISABLE_SINGLE_ACCOUNT_MODE=false
+secretGenerator:
+- name: netbird-secrets
+  literals:
+  - NETBIRD_IDP_MGMT_CLIENT_SECRET=MYCLIENTSECRET
+  # openssl rand -base64 32
+  - NETBIRD_DATASTORE_ENC_KEY="openssl rand -base64 32 | sed 's/=//g'"
+  # is required only by Google workspace.
+  - NETBIRD_AUTH_CLIENT_SECRET=""
