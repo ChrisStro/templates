@@ -1,0 +1,8 @@
+services:
+  ztnet:
+    environment:
+      OAUTH_ID: "$OIDC_CLIENTID"
+      OAUTH_SECRET: "$OIDC_SECRET"
+      OAUTH_WELLKNOWN: "$OIDC_DISCOVERY_URL"
+      OAUTH_ALLOW_DANGEROUS_EMAIL_LINKING: "${ACCOUNT_MERGING:-false}"
+      NEXTAUTH_URL: "https://$PUBLIC_HOSTNAME"
