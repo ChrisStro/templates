@@ -1,7 +1,7 @@
 services:
   dashboard:
     environment:
-      - AUTH_CLIENT_SECRET=$NETBIRD_AUTH_CLIENT_SECRET
+      - AUTH_CLIENT_SECRET=
       - AUTH_AUDIENCE=$NETBIRD_AUTH_CLIENT_ID
       - AUTH_AUTHORITY=https://login.microsoftonline.com/$AZ_TENANT_ID/v2.0
 
