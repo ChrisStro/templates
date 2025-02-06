@@ -1,0 +1,106 @@
+services:
+  homepage:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # optional, for docker integrations
+    configs:
+      - source: custom.js
+        target: /app/config/custom.js
+      - source: custom.css
+        target: /app/config/custom.css
+      - source: docker.yaml
+        target: /app/config/docker.yaml
+      - source: services.yaml
+        target: /app/config/services.yaml
+      - source: settings.yaml
+        target: /app/config/settings.yaml
+      - source: widgets.yaml
+        target: /app/config/widgets.yaml
+      - source: bookmarks.yaml
+        target: /app/config/bookmarks.yaml
+
+configs:
+  custom.js:
+    content: |
+      # content
+  custom.css:
+    content: |
+      # content
+  docker.yaml:
+    content: |
+      # content
+  services.yaml:
+    content: |
+      - Networking:
+          - My First Service:
+              href: http://localhost/
+              description: Homepage is awesome
+
+      - Security:
+          - Bitwarden:
+              icon: bitwarden.png
+              href: https://bitwarden.com/
+              description: Popular Password Manager
+          - wazuh:
+              icon: https://wazuh.com/uploads/2024/01/platform-overview-cover.png
+              href: https://wazuh.com/
+              description: Free Open Source SIEM
+
+      - Automation:
+          - My Second Service:
+              href: http://localhost/
+              description: Homepage is the best
+
+      - Cloud Apps:
+          - NextCloud:
+              icon: nextcloud-blue.png
+              href: https://nextcloud.com/
+              description: Private Webcloud
+          - mailcow:
+              icon: mailcow.png
+              href: https://mailcow.email/
+              description: dockerized mailserver
+  settings.yaml:
+    content: |
+      background:
+        image: https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=2560&q=80
+        blur: sm
+        saturate: 50
+        brightness: 50
+        opacity: 50
+  widgets.yaml:
+    content: |
+      - resources:
+          backend: resources
+          expanded: true
+          cpu: true
+          memory: true
+      - search:
+          provider: google
+          target: _blank
+
+  bookmarks.yaml:
+    content: |
+      - Developer:
+        - Github:
+          - icon: github.png
+            href: https://github.com/
+            description: Versioning source code platform
+        - Base64Converter:
+            - abbr: BASE64
+              href: www.base64decode.org
+              description: Online base64 encoding/decoding
+
+      - Social:
+        - Reddit:
+          - icon: reddit.png
+            href: https://reddit.com/
+            description: The front page of the internet
+        - X:
+          - icon: https://cdn.icon-icons.com/icons2/4029/PNG/512/twitter_x_new_logo_x_rounded_icon_256078.png
+            href: https://twitter.com/
+            description: The "new" Twitter
+
+      - Entertainment:
+        - YouTube:
+            - abbr: YT
+              href: https://youtube.com/

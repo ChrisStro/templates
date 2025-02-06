@@ -5,8 +5,6 @@ services:
     restart: unless-stopped
     networks:
       - proxy_network
-    # ports:
-    #   - 3000:3000
     volumes:
       - /opt/stacks/homepage/config:/app/config # Make sure your local config directory exists
       # optional, for docker integrations
@@ -17,7 +15,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.homepage.tls=true"
-      - "traefik.http.routers.homepage.entrypoints=$TRAEFIK_ENTRYPOINT"
+      - "traefik.http.routers.homepage.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.homepage.rule=Host(`$PUBLIC_HOSTNAME`)"
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
 
