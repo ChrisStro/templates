@@ -75,7 +75,7 @@ services:
         target: /fileprovider/config.yml
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${UNIX_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
       - traefik_certs:/cloudflare
     labels:
       # https part
