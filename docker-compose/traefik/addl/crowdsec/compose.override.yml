@@ -1,18 +1,5 @@
 services:
   traefik:
-    image: "traefik:latest"
-    container_name: "traefik"
-    restart: unless-stopped
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
-    networks:
-      - proxy_network
-    ports:
-      - "80:80"
-      - "880:880"
-      - "443:443"
-      - "4443:4443"
     command:
       # provider setup docker/file
       - "--providers.docker=true"
@@ -71,28 +58,9 @@ services:
       - "--api=true"
       - "--api.dashboard=$DASHBOARDENABLED"
       - "--api.insecure=false"
-    security_opt:
-      - no-new-privileges:true
-    # cloudflare stuff
-    environment:
-      - CF_API_EMAIL=$CF_API_EMAIL
-      - CF_DNS_API_TOKEN=$CF_DNS_API_TOKEN
-    configs:
-      - source: fileprovider
-        target: /fileprovider/config.yml
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ${UNIX_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
-      - traefik_certs:/cloudflare
-      # crowdsec
+      # crowdsec log access
       - traefik_access_log:/var/log/crowdsec/
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik-secure.service=api@internal"
-      - "traefik.http.routers.traefik-secure.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure-internal}"
-      - "traefik.http.routers.traefik-secure.rule=Host(`t.$DOMAINNAME`)"
-      # important middleware
-      - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
 
   crowdsec:
     image: crowdsecurity/crowdsec
@@ -133,34 +101,15 @@ services:
       - "traefik.http.services.crowdsec-bouncer.loadbalancer.server.port=8080"
 
 configs:
-  fileprovider:
-    content: |
-      tls:
-        options:
-          default:
-            minVersion: VersionTLS12
-            cipherSuites:
-            # Recommended ciphers for TLSv1.2
-            - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-            - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-            - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
-            # Recommended ciphers for TLSv1.3
-            - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-            - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-            - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
-          tlsv13only:
-            minVersion: VersionTLS13
   crowdsec_parser:
     content: |
       ---
-        filenames:
-          - /var/log/crowdsec/traefik.log
-        labels:
-          type: traefik
+      filenames:
+        - /var/log/crowdsec/traefik.log
+      labels:
+        type: traefik
 
 volumes:
-  traefik_certs:
-  traefik_access_log:
   crowdsec_db:
   crowdsec_config:
 

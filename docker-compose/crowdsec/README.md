@@ -10,3 +10,6 @@ Notes:
 - Create alias for easy usage via 'alias cscli="docker exec crowdsec cscli"'
 - Check decisions make: cscli decision list
 - Unban yourself via cscli decision delete --ip YOUR.PUBLIC.IP.v4
+
+## IMPORTANT
+- Compose file now available as compose.override.yml in docker-compose/traefik/addl/crowdsec
