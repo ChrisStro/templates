@@ -1,8 +1,6 @@
-version: '3'
-
 services:
   check-mk:
-    image: "checkmk/check-mk-raw:2.2.0-latest"
+    image: "checkmk/check-mk-raw:latest"
     # image: checkmk/check-mk-cloud:2.2.0p7 # free/trial
     container_name: "checkmk"
     restart: unless-stopped
@@ -25,10 +23,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.checkmk.rule=Host(`$PUBLIC_HOSTNAME`)"
-      - "traefik.http.routers.checkmk.entrypoints=websecure"
-      # - "traefik.http.routers.checkmk.tls=true"
+      - "traefik.http.routers.checkmk.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.checkmk.loadbalancer.server.port=5000"
-      # - "traefik.http.routers.checkmk.tls.certresolver=cf-production" # when using tlsChallenge certresolver
 
 volumes:
   cmk_data:
