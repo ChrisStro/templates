@@ -1,0 +1,23 @@
+services:
+  nexus3:
+    image: sonatype/nexus3
+    container_name: nexus
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    volumes:
+      - 'nexus_data:/nexus-data'
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nexus3.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.nexus3.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.nexus3.loadbalancer.server.port=8081"
+
+volumes:
+  nexus_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
