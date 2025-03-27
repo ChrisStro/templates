@@ -1,6 +1,6 @@
 services:
   teleport:
-    # image: public.ecr.aws/gravitational/teleport:16.4.2
+    # image: public.ecr.aws/gravitational/teleport:$IMAGETAG
     image: public.ecr.aws/gravitational/teleport-distroless:$IMAGETAG # if you don't need ssh support
     container_name: teleport-agent
     restart: unless-stopped
@@ -18,36 +18,27 @@ services:
 configs:
   teleport.yaml:
     content: |
+      version: v3
       teleport:
-        nodename: docker-agent
+        nodename: ${NODENAME:-docker-agent}
         data_dir: /var/lib/teleport
         join_params:
-          token_name: enter_my_join_token
+          token_name: $TELEPORT_TOKEN
           method: token
-        proxy_server: $DOMAINNAME:443
+        proxy_server: $TELEPORT_PROXY
         log:
           output: stderr
           severity: INFO
           format:
             output: text
-        ca_pin: sha256:ffbc....6 # copy ca pin from default agent
+        ca_pin: $TELEPORT_CA_PIN
         diag_addr: ""
-
       auth_service:
         enabled: "no"
-
       ssh_service:
-        enabled: "yes"
-        labels:
-          customer: my_customer
-          platform: docker-agent
-
+        enabled: "no"
       proxy_service:
         enabled: "no"
-        https_keypairs: []
-        https_keypairs_reload_interval: 0s
-        acme: {}
-
       app_service:
         enabled: no
         # apps:
