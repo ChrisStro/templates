@@ -1,0 +1,32 @@
+services:
+  stirling-pdf:
+    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest
+    networks:
+      - proxy_network
+    volumes:
+      - trainingData:/usr/share/tessdata
+      - extraConfigs:/configs
+      - customFiles:/customFiles/
+      - logs:/logs/
+      - pipeline:/pipeline/
+    environment:
+      - DOCKER_ENABLE_SECURITY=false
+      - LANGS=de_DE
+      - SYSTEM_DEFAULTLOCALE=de-DE
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.stirling.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.stirling.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.stirling.loadbalancer.server.port=8080"
+
+volumes:
+  trainingData:
+  extraConfigs:
+  customFiles:
+  logs:
+  pipeline:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
