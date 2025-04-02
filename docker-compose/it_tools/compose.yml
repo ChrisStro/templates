@@ -1,0 +1,21 @@
+services:
+  stirling-pdf:
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    restart: unless-stopped
+    networks:
+      - proxy_network
+    environment:
+      - DOCKER_ENABLE_SECURITY=false
+      - LANGS=de_DE
+      - SYSTEM_DEFAULTLOCALE=de-DE
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.it-tools.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.it-tools.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.it-tools.loadbalancer.server.port=80"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
