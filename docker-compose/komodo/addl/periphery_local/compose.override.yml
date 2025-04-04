@@ -1,0 +1,37 @@
+services:
+  core:
+    environment:
+      - KOMODO_FIRST_SERVER=https://periphery:8120
+
+  periphery:
+    image: ghcr.io/mbecker20/periphery:${KOMODO_IMAGETAG:-latest}
+    labels:
+      komodo.skip:
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      - PERIPHERY_PASSKEYS=$KOMODO_PASSKEY
+      - PERIPHERY_SSL_ENABLED=true # Connect to Periphery at https://address:8120
+      - PERIPHERY_INCLUDE_DISK_MOUNTS=/etc/hostname
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/proc # Allow Periphery to see processes outside of container
+      ## use self signed certs in docker volume,
+      ## or mount your own signed certs.
+      - ssl-certs:/etc/komodo/ssl
+      ## manage repos in a docker volume,
+      ## or change it to an accessible host directory.
+      - repos:/etc/komodo/repos
+      ## manage stack files in a docker volume,
+      ## or change it to an accessible host directory.
+      - stacks:/etc/komodo/stacks
+      ## Optionally mount a path to store compose files
+      # - /path/to/compose:/host/compose
+    logging:
+      driver: ${LOGGING_DRIVER:-local}
+
+volumes:
+  ssl-certs:
+  repos:
+  stacks:

@@ -1,0 +1,28 @@
+services:
+  core:
+    environment:
+      - KOMODO_FIRST_SERVER=https://periphery:8120
+  periphery:
+    image: ghcr.io/mbecker20/periphery:${KOMODO_IMAGETAG:-latest}
+    labels:
+      komodo.skip:
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      - PERIPHERY_PASSKEYS=$KOMODO_PASSKEY
+      - PERIPHERY_SSL_ENABLED=true
+      - PERIPHERY_INCLUDE_DISK_MOUNTS=/etc/hostname
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/proc
+      - ssl-certs:/etc/komodo/ssl
+      - repos:/etc/komodo/repos
+      - stacks:/etc/komodo/stacks
+    logging:
+      driver: ${LOGGING_DRIVER:-local}
+
+volumes:
+  ssl-certs:
+  repos:
+  stacks:

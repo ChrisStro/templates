@@ -1,0 +1,84 @@
+services:
+  mongo:
+    image: mongo
+    command: --quiet --wiredTigerCacheSizeGB 0.25
+    restart: unless-stopped
+    networks:
+      - backend
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+    logging:
+      driver: ${LOGGING_DRIVER:-local}
+    labels:
+      komodo.skip: # Prevent Komodo from stopping with StopAllContainers
+
+  core:
+    image: ghcr.io/mbecker20/komodo:${KOMODO_IMAGETAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    networks:
+      - backend
+      - proxy_network
+    ports:
+      - 9120:9120
+    environment:
+      - KOMODO_DATABASE_ADDRESS=mongo:27017
+      - KOMODO_DATABASE_USERNAME=$DB_USERNAME
+      - KOMODO_DATABASE_PASSWORD=$DB_PASSWORD
+      - KOMODO_HOST=https://$PUBLIC_HOSTNAME
+      - KOMODO_TITLE=${KOMODO_TITLE:-Komodo}
+      #- KOMODO_FIRST_SERVER=https://periphery:8120
+      - KOMODO_DISABLE_CONFIRM_DIALOG=${KOMODO_DISABLE_CONFIRM_DIALOG:-false}
+      - KOMODO_MONITORING_INTERVAL=${KOMODO_MONITORING_INTERVAL:-15-sec}
+      - KOMODO_RESOURCE_POLL_INTERVAL=${KOMODO_RESOURCE_POLL_INTERVAL:-5-min}
+      - KOMODO_PASSKEY=$KOMODO_PASSKEY
+      - KOMODO_WEBHOOK_SECRET=$KOMODO_WEBHOOK_SECRET
+      - KOMODO_JWT_SECRET=$KOMODO_JWT_SECRET
+      # Authentication
+      - KOMODO_LOCAL_AUTH=${KOMODO_LOCAL_AUTH:-true}
+      - KOMODO_DISABLE_USER_REGISTRATION=${KOMODO_DISABLE_USER_REGISTRATION:-false}
+      - KOMODO_ENABLE_NEW_USERS=${KOMODO_ENABLE_NEW_USERS:-false}
+      - KOMODO_DISABLE_NON_ADMIN_CREATE=${KOMODO_DISABLE_NON_ADMIN_CREATE:-false}
+      - KOMODO_TRANSPARENT_MODE=${KOMODO_TRANSPARENT_MODE:-false}
+      - KOMODO_JWT_TTL=${KOMODO_JWT_TTL:-1-day}
+      - KOMODO_OIDC_ENABLED=${KOMODO_OIDC_ENABLED:-false}
+    logging:
+      driver: ${LOGGING_DRIVER:-local}
+    labels:
+      - komodo.skip
+      - "traefik.enable=true"
+      - traefik.docker.network=$PROXY_NETWORK
+      - "traefik.http.routers.komodo-core.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.komodo-core.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.komodo-core.loadbalancer.server.port=9120"
+
+
+    volumes:
+      - repo-cache:/repo-cache
+      ## Store sync files on server
+      # - /path/to/syncs:/syncs
+      ## Optionally mount a custom core.config.toml
+      # - /path/to/core.config.toml:/config/config.toml
+    ## Allows for systemd Periphery connection at
+    ## "http://host.docker.internal:8120"
+    # extra_hosts:
+    #   - host.docker.internal:host-gateway
+
+
+
+volumes:
+  mongo-data:
+  mongo-config:
+  # Core
+  repo-cache:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
