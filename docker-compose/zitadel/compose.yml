@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   zitadel:
     image: 'ghcr.io/zitadel/zitadel:latest'
@@ -9,14 +7,19 @@ services:
       - proxy_network
       - zitadel
     # command: 'start-from-init --masterkey "$MASTERKEY" --tlsMode disabled'
-    command: 'start-from-init --masterkey "$MASTERKEY"'
+    command: 'start-from-init --masterkey "$ZITADEL_MASTERKEY"'
     environment:
       - ZITADEL_EXTERNALDOMAIN=$PUBLIC_HOSTNAME
       - ZITADEL_EXTERNALPORT=443
       - ZITADEL_EXTERNALSECURE=true             # tls until proxy
       - ZITADEL_TLS_ENABLED=false               # tls between containers
       - ZITADEL_DATABASE_COCKROACH_HOST=crdb
-      # - ZITADEL_MASTERKEY=$ZITADEL_MASTERKEY
+      - ZITADEL_FIRST_USER_FIRSTNAME=Admin
+      - ZITADEL_FIRST_USER_LASTNAME=User
+      - ZITADEL_FIRST_USER_ROLE=admin
+      - ZITADEL_FIRST_USER_EMAIL=$ZITADEL_FIRST_USER_EMAIL
+      - ZITADEL_FIRST_USER_PASSWORD=$ZITADEL_FIRST_USER_PASSWORD
+      - ZITADEL_INSTANCE_NAME=myzitadel
     depends_on:
       crdb:
         condition: 'service_healthy'
@@ -24,7 +27,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=$PROXY_NETWORK"
       - "traefik.http.routers.zitadel.rule=Host(`$PUBLIC_HOSTNAME`)"
-      - "traefik.http.routers.zitadel.entrypoints=websecure"
+      - "traefik.http.routers.zitadel.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.zitadel.loadbalancer.server.port=8080"
 
   crdb:

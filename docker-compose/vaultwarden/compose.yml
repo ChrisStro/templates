@@ -12,8 +12,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.vaultwarden.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.vaultwarden.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.routers.vaultwarden.tls=true"
-      # - "traefik.http.routers.traefik.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
 
 volumes:
   vaultwarden_data:

@@ -1,0 +1,28 @@
+services:
+  ntfy:
+    image: binwiederhier/ntfy
+    container_name: ntfy
+    networks:
+      - proxy_network
+    command:
+      - serve
+    volumes:
+      - ntfy:/etc/ntfy
+      - ntfy_cache:/var/cache/ntfy
+    environment:
+      - TZ=Europe/Berlin
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ntfy.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.ntfy.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.ntfy.tls=true"
+      - "traefik.http.services.ntfy.loadbalancer.server.port=80"
+
+volumes:
+  ntfy:
+  ntfy_cache:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
