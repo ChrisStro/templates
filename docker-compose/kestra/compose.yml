@@ -52,7 +52,6 @@ services:
                 volume-enabled: true
           variables:
             envVarsPrefix: "" # to avoid requiring KESTRA_ prefix on env vars
-
     volumes:
       - kestra-data:/app/storage
       - /var/run/docker.sock:/var/run/docker.sock
