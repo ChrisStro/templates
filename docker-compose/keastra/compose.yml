@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16
+    networks:
+      - backend
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: ${DB_USER:-kestra}
+      POSTGRES_PASSWORD: ${DB_PWD:-k3str4}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  kestra:
+    image: kestra/kestra:latest
+    user: "root"
+    command: server standalone
+    environment:
+      JAVA_OPTS: "--add-opens java.base/java.nio=ALL-UNNAMED"
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      KESTRA_CONFIGURATION: |
+        url: https://$PUBLIC_HOSTNAME/
+        datasources:
+          postgres:
+            url: jdbc:postgresql://postgres:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: ${DB_USER:-kestra}
+            password: ${DB_PWD:-k3str4}
+        kestra:
+          repository:
+            type: postgres
+          storage:
+            type: local
+            local:
+              basePath: "/app/storage"
+          queue:
+            type: postgres
+          server:
+            basicAuth:
+              enabled: false
+          anonymousUsageReport:
+            enabled: false
+          tasks:
+            tmpDir:
+              path: /tmp/kestra-wd/tmp
+            scripts:
+              docker:
+                volume-enabled: true
+          variables:
+            envVarsPrefix: "" # to avoid requiring KESTRA_ prefix on env vars
+
+    volumes:
+      - kestra-data:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kestra-wd:/tmp/kestra-wd
+    depends_on:
+      - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.kestra.rule=Host(`$PUBLIC_HOSTNAME`)"   # Passe die Domain an!
+      - "traefik.http.routers.kestra.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.kestra.loadbalancer.server.port=8080"
+    networks:
+      - backend
+      - proxy_network
+
+volumes:
+  pgdata:
+  kestra-data:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
