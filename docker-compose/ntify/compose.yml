@@ -6,6 +6,8 @@ services:
       - proxy_network
     command:
       - serve
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ntfy:/etc/ntfy
       - ntfy_cache:/var/cache/ntfy

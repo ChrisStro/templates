@@ -6,4 +6,4 @@ Do you have a project that requires multi-tenant user management with self-servi
 [GitHub Page](https://github.com/zitadel/zitadel)
 
 # Notes
-1. Init login zitadel-admin@zitadel.localhost / Password1!
+1. Init login zitadel-admin@zitadel.$PUBLIC_HOSTNAME / Password1!

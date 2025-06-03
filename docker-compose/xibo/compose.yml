@@ -1,0 +1,86 @@
+---
+services:
+    cms-db:
+        image: mysql:8.0
+        container_name: cms-db
+        restart: unless-stopped
+        networks:
+          - backend
+        volumes:
+            - "cms_db:/var/lib/mysql:Z"
+        environment:
+            - MYSQL_DATABASE=cms
+            - MYSQL_USER=cms
+            - MYSQL_RANDOM_ROOT_PASSWORD=yes
+        mem_limit: 1g
+        env_file: config.env
+    cms-xmr:
+        image: ghcr.io/xibosignage/xibo-xmr:1.0
+        container_name: cms-xmr
+        restart: unless-stopped
+        networks:
+          - backend
+        ports:
+            - "9505:9505"
+        mem_limit: 256m
+        env_file: config.env
+    cms-web:
+        image: ghcr.io/xibosignage/xibo-cms:release-4.2.2
+        container_name: cms-web
+        restart: unless-stopped
+        mem_limit: 1g
+        networks:
+          - backend
+          - proxy_network
+        ports:
+            - "80:80"
+        volumes:
+            - "cms_backup:/var/www/backup:Z"
+            - "cms_custom:/var/www/cms/custom:Z"
+            - "cms_custom_theme:/var/www/cms/web/theme/custom:Z"
+            - "cms_library:/var/www/cms/library:Z"
+            - "cms_userscripts:/var/www/cms/web/userscripts:Z"
+            - "cms_certs:/var/www/cms/ca-certs:Z"
+        environment:
+            - MYSQL_HOST=cms-db
+            - XMR_HOST=cms-xmr
+            - CMS_USE_MEMCACHED=true
+            - MEMCACHED_HOST=cms-memcached
+        env_file: config.env
+        labels:
+          - "traefik.enable=true"
+          - traefik.docker.network=$PROXY_NETWORK
+          - "traefik.http.routers.xibo-web.rule=Host(`$PUBLIC_HOSTNAME`)"
+          - "traefik.http.routers.xibo-web.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+          - "traefik.http.services.xibo-web.loadbalancer.server.port=80"
+
+
+    cms-memcached:
+        image: memcached:alpine
+        container_name: cms-memcached
+        command: memcached -m 15
+        restart: always
+        mem_limit: 100M
+        networks:
+          - backend
+    cms-quickchart:
+      image: ianw/quickchart
+      container_name: cms-quickchart
+      restart: unless-stopped
+      networks:
+        - backend
+
+volumes:
+  cms_db:
+  cms_web:
+  cms_backup:
+  cms_certs:
+  cms_userscripts:
+  cms_library:
+  cms_custom:
+  cms_custom_theme:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
