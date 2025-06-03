@@ -1,0 +1,54 @@
+services:
+    r3_db:
+      image: postgres:16
+      container_name: r${R3_VERSION:-3.10.4}_db
+      restart: always
+      networks:
+        - backend
+      environment:
+          POSTGRES_DB: ${R3_DB_NAME:-app}
+          POSTGRES_USER: ${R3_DB_USER:-app}
+          POSTGRES_PASSWORD: ${R3_DB_PASS:-app}
+      volumes:
+          - data_db:/var/lib/postgresql/data
+    r3:
+      image: r3:${R3_VERSION:-3.10.4}
+      container_name: r${R3_VERSION:-3.10.4}_app
+      restart: always
+      networks:
+        - backend
+        - proxy_network
+      pull_policy: never
+      depends_on:
+        - r3_db
+      ports:
+        - "14000:80"
+      build:
+          context: https://github.com/r3-team/r3_docker.git#main
+          args:
+              r3_version: ${R3_VERSION:-3.10.4}
+              r3_db_host: r3_db
+              r3_db_name: ${R3_DB_NAME:-app}
+              r3_db_user: ${R3_DB_USER:-app}
+              r3_db_pass: ${R3_DB_PASS:-app}
+              r3_os_arch: x64
+              im_policy: /etc/ImageMagick-6/policy.xml
+      volumes:
+        - data_app:/opt/r3/data
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=$PROXY_NETWORK"
+        - "traefik.http.routers.rei3.rule=Host(`$PUBLIC_HOSTNAME`)"
+        - "traefik.http.routers.rei3.tls=true"
+        - "traefik.http.routers.rei3.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+        - "traefik.http.services.rei3.loadbalancer.server.port=80"
+
+volumes:
+    data_db:
+    data_app:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
