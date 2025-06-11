@@ -1,0 +1,96 @@
+services:
+  traefik:
+    image: "traefik:latest"
+    container_name: "traefik"
+    restart: always
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    networks:
+      - proxy_network
+    ports:
+      - "4443:4443"
+      - "443:443"
+      - "80:80"
+      - "880:880"
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--providers.file=true"
+      - "--providers.file.filename=/fileprovider/config.yml"
+      # Traefik settings
+      - "--log.level=info" # level: debug, info, warning, error, critical
+      - "--global.checkNewVersion=true"
+      - "--global.sendAnonymousUsage=false"
+      - "--serverstransport.insecureskipverify=true" # when forwarding to selfsigned
+      # Configure entrypoints
+      - "--entrypoints.web.address=:880"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.websecure.address=:4443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certResolver=letsencrypt"
+      - "--entrypoints.web-internal.address=:80"
+      - "--entrypoints.web-internal.http.redirections.entryPoint.to=websecure-internal"
+      - "--entrypoints.websecure-internal.address=:443"
+      - "--entrypoints.websecure-internal.http.tls=true"
+      # SSL Ciphers
+      - "--entrypoints.websecure.http.tls.options=default" # from fileprovider
+      # middlewares
+      # - "--entrypoints.websecure.http.middlewares=hsts-header@docker"
+      # Enable dashboard
+      - "--api=true"
+      - "--api.dashboard=$DASHBOARDENABLED"
+      - "--api.insecure=false"
+    security_opt:
+      - no-new-privileges:true
+    configs:
+      - source: fileprovider
+        target: /fileprovider/config.yml
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${UNIX_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - $OWN_CERT_FILE:/etc/certs/cert.pem
+      - $OWN_KEY_FILE:/etc/certs/key.pem
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=websecure-internal"
+      - "traefik.http.routers.traefik.rule=Host(`t.$DOMAINNAME`)"
+      # important middleware
+      # - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
+
+configs:
+  fileprovider:
+    content: |
+      tls:
+        stores:
+          default:
+            defaultCertificate:
+              certFile: /etc/certs/cert.pem
+              keyFile: /etc/certs/key.pem
+        certificates:
+          - certFile: /etc/certs/cert.pem
+            keyFile: /etc/certs/key.pem
+        options:
+          default:
+            minVersion: VersionTLS12
+            cipherSuites:
+            # Recommended ciphers for TLSv1.2
+            - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+            # Recommended ciphers for TLSv1.3
+            - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+          tlsv13only:
+            minVersion: VersionTLS13
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
