@@ -49,6 +49,9 @@ services:
       - "traefik.http.routers.loki.rule=Host(`$LOKI_HOSTNAME`)"
       - "traefik.http.routers.loki.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.loki.loadbalancer.server.port=3100"
+      # basic auth for loki
+      - "traefik.http.routers.loki.middlewares=loki-auth"
+      - "traefik.http.middlewares.loki-auth.basicauth.users=$LOKI_BA_AUTH"
 
 configs:
   prometheus.yml:
