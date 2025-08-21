@@ -43,6 +43,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=$PROXY_NETWORK"
       - "traefik.http.routers.passbolt.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.passbolt.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.routers.passbolt.tls=true"
       - "traefik.http.services.passbolt.loadbalancer.server.port=4433"
       - "traefik.http.services.passbolt.loadbalancer.server.scheme=https"
