@@ -1,7 +1,6 @@
 services:
   db:
     image: mariadb:10.3
-    container_name: mariadb
     restart: unless-stopped
     networks:
       - backend
@@ -16,7 +15,6 @@ services:
   passbolt:
     #image: passbolt/passbolt:latest-ce
     image: passbolt/passbolt:latest-ce-non-root # non-root container should always be prefered
-    container_name: passbolt
     restart: unless-stopped
     networks:
       - proxy_network
