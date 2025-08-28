@@ -6,6 +6,9 @@ services:
       - proxy_network
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=$GRAFANA_PASSWORD
+    configs:
+      - source: grafana-datasources
+        target: /etc/grafana/provisioning/datasources/ds.yaml
     volumes:
       - grafana_data:/var/lib/grafana
     labels:
@@ -32,6 +35,9 @@ services:
       - "traefik.http.routers.prometheus.rule=Host(`$PROMETHEUS_HOSTNAME`)"
       - "traefik.http.routers.prometheus.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      # basic auth for prometheus
+      - "traefik.http.routers.prometheus.middlewares=prometheus-auth"
+      - "traefik.http.middlewares.prometheus-auth.basicauth.users=${PROM_BA_AUTH:-$BASIC_AUTH}"
 
   loki:
     image: 'grafana/loki'
@@ -51,7 +57,7 @@ services:
       - "traefik.http.services.loki.loadbalancer.server.port=3100"
       # basic auth for loki
       - "traefik.http.routers.loki.middlewares=loki-auth"
-      - "traefik.http.middlewares.loki-auth.basicauth.users=$LOKI_BA_AUTH"
+      - "traefik.http.middlewares.loki-auth.basicauth.users=${LOKI_BA_AUTH:-$BASIC_AUTH}"
 
 configs:
   prometheus.yml:
@@ -154,6 +160,27 @@ configs:
       ruler:
         alertmanager_url: http://localhost:9093
 
+  grafana-datasources:
+    content: |
+      apiVersion: 1
+      datasources:
+      - name: Loki
+        type: loki
+        access: proxy
+        orgId: 1
+        url: http://loki:3100
+        basicAuth: false
+        isDefault: false
+        version: 1
+        editable: false
+      - name: Prometheus
+        type: prometheus
+        orgId: 1
+        url: http://prometheus:9090
+        basicAuth: false
+        isDefault: true
+        version: 1
+        editable: false
 volumes:
   grafana_data:
   prometheus_data:
