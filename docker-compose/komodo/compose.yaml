@@ -13,6 +13,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
     logging:
       driver: ${LOGGING_DRIVER:-local}
+      options:
+        max-size: "200m"
     labels:
       komodo.skip: # Prevent Komodo from stopping with StopAllContainers
 
@@ -49,6 +51,8 @@ services:
       - KOMODO_OIDC_ENABLED=${KOMODO_OIDC_ENABLED:-false}
     logging:
       driver: ${LOGGING_DRIVER:-local}
+      options:
+        max-size: "200m"
     labels:
       - komodo.skip
       - "traefik.enable=true"

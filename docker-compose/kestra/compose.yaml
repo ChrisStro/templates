@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16
+    container_name: postgres
     networks:
       - backend
     environment:
@@ -17,6 +18,7 @@ services:
 
   kestra:
     image: kestra/kestra:latest
+    container_name: kestra
     user: "root"
     command: server standalone
     environment:
@@ -57,7 +59,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/kestra-wd:/tmp/kestra-wd
     depends_on:
-      - postgres
+      postgres:
+        condition: service_started
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=$PROXY_NETWORK"
