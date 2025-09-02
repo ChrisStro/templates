@@ -6,6 +6,8 @@ services:
       - proxy_network
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=$GRAFANA_PASSWORD
+      - GF_SERVER_DOMAIN=$GRAFANA_HOSTNAME
+      - GF_SERVER_ROOT_URL=https://$GRAFANA_HOSTNAME/
     configs:
       - source: grafana-datasources
         target: /etc/grafana/provisioning/datasources/ds.yaml
