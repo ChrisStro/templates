@@ -1,7 +1,7 @@
 # create user: sudo docker-compose run --rm paperless-ngx createsuperuser
 services:
   db:
-    image: docker.io/library/postgres:13
+    image: docker.io/library/postgres:17
     restart: unless-stopped
     networks:
       - backend
@@ -13,15 +13,14 @@ services:
       POSTGRES_PASSWORD: $POSTGRES_PASSWORD
 
   broker:
-    image: docker.io/library/redis:6.0
+    image: docker.io/library/redis:8
     restart: unless-stopped
     networks:
       - backend
     volumes:
       - redis_data:/data
 
-
-  paperless-ngx:
+  webserver:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
     container_name: "paperless-ngx"
     restart: unless-stopped
@@ -31,8 +30,6 @@ services:
     depends_on:
       - db
       - broker
-    # ports:
-    #   - 8000:8000
     healthcheck:
       test: ["CMD", "curl", "-fs", "-S", "--max-time", "2", "http://localhost:8000"]
       interval: 30s
@@ -51,11 +48,12 @@ services:
       PAPERLESS_TIME_ZONE: Europe/Berlin
       USERMAP_UID: 1026
     labels:
-     - "traefik.enable=true"
      - "traefik.docker.network=$PROXY_NETWORK"
-     - "traefik.http.routers.paperless.rule=Host(`$PUBLIC_HOSTNAME`)"
-     - traefik.http.routers.paperless.entrypoints=$TRAEFIK_ENTRYPOINTS
+     - "traefik.enable=true"
      - "traefik.http.routers.paperless.tls=true"
+     - "traefik.http.routers.paperless.rule=Host(`$PUBLIC_HOSTNAME`)"
+     - "traefik.http.routers.paperless.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+     - "traefik.http.routers.paperless.service=paperless"
      - "traefik.http.services.paperless.loadbalancer.server.port=8000"
      # - "traefik.http.routers.paperless.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
 
