@@ -1,8 +1,16 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
 services:
   # UI dashboard
   dashboard:
+    <<: *default
     image: netbirdio/dashboard:latest
-    restart: unless-stopped
     networks:
       - proxy_network
     environment:
@@ -20,21 +28,16 @@ services:
       - NETBIRD_DISABLE_LETSENCRYPT=true
       - NETBIRD_TOKEN_SOURCE=$NETBIRD_TOKEN_SOURCE
       - NGINX_SSL_PORT=443
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "500m"
-        max-file: "2"
     labels:
-    - traefik.enable=true
-    - traefik.http.routers.netbird-dashboard.rule=Host(`$NETBIRD_DOMAIN`)
-    - traefik.http.routers.netbird-dashboard.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
-    - traefik.http.services.netbird-dashboard.loadbalancer.server.port=80
+      - traefik.enable=true
+      - traefik.http.routers.netbird-dashboard.rule=Host(`$NETBIRD_DOMAIN`)
+      - traefik.http.routers.netbird-dashboard.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+      - traefik.http.services.netbird-dashboard.loadbalancer.server.port=80
 
   # Signal
   signal:
+    <<: *default
     image: netbirdio/signal:latest
-    restart: unless-stopped
     networks:
       - proxy_network
     volumes:
@@ -44,44 +47,34 @@ services:
     #      # port and command for Let's Encrypt validation
     #      - 443:443
     #    command: ["--letsencrypt-domain", "", "--log-file", "console"]
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "500m"
-        max-file: "2"
     labels:
-    - traefik.enable=true
-    - traefik.http.routers.netbird-signal.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/signalexchange.SignalExchange/`)
-    - traefik.http.routers.netbird-signal.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
-    - traefik.http.services.netbird-signal.loadbalancer.server.port=80
-    - traefik.http.services.netbird-signal.loadbalancer.server.scheme=h2c
+      - traefik.enable=true
+      - traefik.http.routers.netbird-signal.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/signalexchange.SignalExchange/`)
+      - traefik.http.routers.netbird-signal.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+      - traefik.http.services.netbird-signal.loadbalancer.server.port=80
+      - traefik.http.services.netbird-signal.loadbalancer.server.scheme=h2c
 
   # Relay
   relay:
+    <<: *default
     image: netbirdio/relay:latest
-    restart: unless-stopped
     networks:
       - proxy_network
     environment:
-    - NB_LOG_LEVEL=info
-    - NB_LISTEN_ADDRESS=:30080
-    - NB_EXPOSED_ADDRESS=rels://$RELAY_DOMAIN:443
-    - NB_AUTH_SECRET=$RELAY_SECRET
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "500m"
-        max-file: "2"
+      - NB_LOG_LEVEL=info
+      - NB_LISTEN_ADDRESS=:30080
+      - NB_EXPOSED_ADDRESS=rels://$RELAY_DOMAIN:443
+      - NB_AUTH_SECRET=$RELAY_SECRET
     labels:
-    - traefik.enable=true
-    - traefik.http.routers.netbird-relay.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
-    - traefik.http.routers.netbird-relay.rule=Host(`$RELAY_DOMAIN`)
-    - traefik.http.services.netbird-relay.loadbalancer.server.port=30080
+      - traefik.enable=true
+      - traefik.http.routers.netbird-relay.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+      - traefik.http.routers.netbird-relay.rule=Host(`$RELAY_DOMAIN`)
+      - traefik.http.services.netbird-relay.loadbalancer.server.port=30080
 
   # Management
   management:
+    <<: *default
     image: netbirdio/management:latest
-    restart: unless-stopped
     networks:
       - proxy_network
     depends_on:
@@ -99,22 +92,43 @@ services:
         target: /etc/netbird/management.json
     volumes:
       - netbird-mgmt:/var/lib/netbird
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "500m"
-        max-file: "2"
     labels:
-    - traefik.enable=true
-    - traefik.http.routers.netbird-api.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/api`)
-    - traefik.http.routers.netbird-api.service=netbird-api
-    - traefik.http.routers.netbird-api.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
-    - traefik.http.services.netbird-api.loadbalancer.server.port=443
-    - traefik.http.routers.netbird-management.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/management.ManagementService/`)
-    - traefik.http.routers.netbird-management.service=netbird-management
-    - traefik.http.routers.netbird-management.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
-    - traefik.http.services.netbird-management.loadbalancer.server.port=443
-    - traefik.http.services.netbird-management.loadbalancer.server.scheme=h2c
+      - traefik.enable=true
+      - traefik.http.routers.netbird-api.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/api`)
+      - traefik.http.routers.netbird-api.service=netbird-api
+      - traefik.http.routers.netbird-api.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+      - traefik.http.services.netbird-api.loadbalancer.server.port=443
+      - traefik.http.routers.netbird-management.rule=Host(`$NETBIRD_DOMAIN`) && PathPrefix(`/management.ManagementService/`)
+      - traefik.http.routers.netbird-management.service=netbird-management
+      - traefik.http.routers.netbird-management.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+      - traefik.http.services.netbird-management.loadbalancer.server.port=443
+      - traefik.http.services.netbird-management.loadbalancer.server.scheme=h2c
+
+  coturn:
+    <<: *default
+    image: coturn/coturn:latest
+    domainname: $NETBIRD_DOMAIN
+    ports:
+      - "3478:3478/udp"
+      - "$TURN_MIN_PORT-$TURN_MAX_PORT:$TURN_MIN_PORT-$TURN_MAX_PORT/udp"
+    command:
+      - --user=$TURN_USER:$TURN_PASSWORD
+      - --min-port=$TURN_MIN_PORT
+      - --max-port=$TURN_MAX_PORT
+      - --listening-port=3478
+      - --tls-listening-port=5349
+      - --cert=/etc/coturn/certs/cert.pem
+      - --pkey=/etc/coturn/private/privkey.pem
+      - --lt-cred-mech
+      - --realm=wiretrustee.com
+      - --log-file=stdout
+      - --no-cli
+      - --fingerprint
+      - --lt-cred-mech
+      - --no-software-attribute
+      - --pidfile="/var/tmp/turnserver.pid"
+    environment:
+      - TZ=Europe/Berlin
 
 volumes:
   netbird-mgmt:
