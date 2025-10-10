@@ -60,7 +60,7 @@ services:
         condition: service_healthy
     labels:
      - "traefik.enable=true"
-     - traefik.docker.network=$PROXY_NETWORK
+     - "traefik.docker.network=$PROXY_NETWORK"
      - "traefik.http.routers.n8n.rule=Host(`$PUBLIC_HOSTNAME`)"
      - "traefik.http.routers.n8n.tls=true"
      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
