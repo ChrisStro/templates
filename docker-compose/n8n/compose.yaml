@@ -1,0 +1,92 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  postgres:
+    <<: *default
+    image: postgres:16
+    networks:
+      - backend
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-dbadmin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-securedbadmindbpwd}
+      - POSTGRES_DB=${POSTGRES_DB:-n8n}
+      - POSTGRES_NON_ROOT_USER=${POSTGRES_NON_ROOT_USER:-n8n}
+      - POSTGRES_NON_ROOT_PASSWORD=${POSTGRES_NON_ROOT_PASSWORD:-securen8ndbpwd}
+    configs:
+      - source: init-data.sh
+        target: /docker-entrypoint-initdb.d/init-data.sh
+    volumes:
+      - db_storage:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER:-dbadmin} -d ${POSTGRES_DB:-n8n}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    <<: *default
+    image: n8nio/n8n:latest
+    networks:
+      - backend
+      - proxy_network
+    volumes:
+      - n8n_storage:/home/node/.n8n
+    environment:
+     - N8N_PORT=5678
+     - DB_TYPE=postgresdb
+     - DB_POSTGRESDB_HOST=postgres
+     - DB_POSTGRESDB_PORT=5432
+     - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n}
+     - DB_POSTGRESDB_USER=${POSTGRES_NON_ROOT_USER:-n8n}
+     - DB_POSTGRESDB_PASSWORD=${POSTGRES_NON_ROOT_PASSWORD:-securen8ndbpwd}
+     - WEBHOOK_URL=https://$PUBLIC_HOSTNAME
+     - N8N_HOST=$PUBLIC_HOSTNAME
+     - N8N_EMAIL_MODE=smtp
+     - N8N_SMTP_HOST=$N8N_SMTP_HOST
+     - N8N_SMTP_PORT=$N8N_SMTP_HOST
+     - N8N_SMTP_USER=N8N_SMTP_USER$
+     - N8N_SMTP_PASS=$N8N_SMTP_PASS
+     - N8N_SMTP_SSL=true
+     - GENERIC_TIMEZONE=Europe/Berlin
+     - TZ=Europe/Amsterdam
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+     - "traefik.enable=true"
+     - traefik.docker.network=$PROXY_NETWORK
+     - "traefik.http.routers.n8n.rule=Host(`$PUBLIC_HOSTNAME`)"
+     - "traefik.http.routers.n8n.tls=true"
+     - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+     - "traefik.http.routers.n8n.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+configs:
+  init-data.sh:
+    content: |
+      #!/bin/bash
+      set -e;
+
+      if [ -n "${POSTGRES_NON_ROOT_USER:-n8n}" ] && [ -n "${POSTGRES_NON_ROOT_PASSWORD:-securen8ndbpwd}" ]; then
+        psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER:-dbadmin}" --dbname "${POSTGRES_DB:-n8n}" -c "
+          CREATE USER ${POSTGRES_NON_ROOT_USER:-n8n} WITH PASSWORD '${POSTGRES_NON_ROOT_PASSWORD:-securen8ndbpwd}';
+          GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB:-n8n} TO ${POSTGRES_NON_ROOT_USER:-n8n};
+          GRANT CREATE ON SCHEMA public TO ${POSTGRES_NON_ROOT_USER:-n8n};"
+      else
+        echo "SETUP INFO: No Environment variables given!"
+      fi
+
+volumes:
+  db_storage:
+  n8n_storage:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
