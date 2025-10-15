@@ -19,7 +19,7 @@ services:
       komodo.skip: # Prevent Komodo from stopping with StopAllContainers
 
   core:
-    image: ghcr.io/mbecker20/komodo:${KOMODO_IMAGETAG:-latest}
+    image: ghcr.io/moghtech/komodo-core:${KOMODO_IMAGETAG:-latest}
     restart: unless-stopped
     depends_on:
       - mongo

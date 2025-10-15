@@ -1,6 +1,6 @@
 services:
   periphery:
-    image: ghcr.io/mbecker20/periphery:${KOMODO_IMAGETAG:-latest}
+    image: ghcr.io/moghtech/komodo-periphery:${KOMODO_IMAGETAG:-latest}
     labels:
       komodo.skip:
     restart: unless-stopped
