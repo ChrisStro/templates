@@ -1,0 +1,85 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+services:
+  zabbix-server:
+    <<: *default
+    image: zabbix/zabbix-server-pgsql:latest
+    depends_on:
+      - zabbix-db
+    networks:
+      - default
+      - proxy_network
+    # ports:
+    #   - "10051:10051"
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      ZBX_JAVAGATEWAY_ENABLE: "false"
+    volumes:
+      - zabbix_server_data:/var/lib/zabbix
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=$PROXY_NETWORK
+      - traefik.http.routers.zabbix-server.rule=Host(`$SERVER_HOSTNAME`)
+      - traefik.http.routers.zabbix-server.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+      - traefik.http.services.zabbix-server.loadbalancer.server.port=10051
+
+  zabbix-web:
+    <<: *default
+    image: zabbix/zabbix-web-nginx-pgsql:latest
+    depends_on:
+      - zabbix-server
+      - zabbix-db
+    networks:
+      - default
+      - proxy_network
+    #ports:
+    #  - "8080:8080"
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      ZBX_SERVER_HOST: zabbix-server
+      PHP_TZ: "Europe/Berlin"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=$PROXY_NETWORK
+      - traefik.http.routers.zabbix-ui.rule=Host(`$WEBUI_HOSTNAME`)
+      - traefik.http.routers.zabbix-ui.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
+      - traefik.http.services.zabbix-ui.loadbalancer.server.port=8080
+
+  zabbix-db:
+    <<: *default
+    image: postgres:15
+    networks:
+      - default
+    environment:
+      POSTGRES_USER: zabbix
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      POSTGRES_DB: zabbix
+    volumes:
+      - zabbix_db_data:/var/lib/postgresql/data
+
+  zabbix-agent:
+    <<: *default
+    image: zabbix/zabbix-agent:latest
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_HOSTNAME: "Zabbix server"
+    ports:
+      - "10050:10050"
+
+volumes:
+  zabbix_server_data:
+  zabbix_db_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
