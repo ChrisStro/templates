@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   unifi:
     image: "jacobalberty/unifi:latest"
@@ -17,6 +15,15 @@ services:
       - "3478:3478/udp" # STUN
       # - "10001:10001/udp" # device discovery
       # - "1900:1900/udp" # "Make application discoverable on L2 network" in the UniFi Network settings
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${Timezone:-Europe/Berlin}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '500m'
+        max-file: '2'
     volumes:
       - unifi_data:/unifi
     labels:
@@ -27,8 +34,6 @@ services:
       - "traefik.http.routers.unifi.service=unifi"
       - "traefik.http.services.unifi.loadbalancer.server.scheme=https"
       - "traefik.http.services.unifi.loadbalancer.server.port=8443"
-      #- "traefik.http.routers.unifi.tls.certresolver=letsencrypt" # when using tlsChallenge certresolver
-
       # add extra entrypoint to your traefik container first
       - "traefik.http.routers.unifi-guest.tls=true"
       - "traefik.http.routers.unifi-guest.entrypoints=guestportal"

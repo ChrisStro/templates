@@ -37,6 +37,9 @@ services:
       - proxy_network
     volumes:
       - n8n_storage:/home/node/.n8n
+    env_file:
+      - .env
+      - .env-secrets
     environment:
      - DB_TYPE=postgresdb
      - DB_POSTGRESDB_HOST=postgres
