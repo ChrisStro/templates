@@ -1,0 +1,41 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  zerobyte:
+    <<: *default
+    image: ghcr.io/nicotsx/zerobyte:v0.19
+    container_name: zerobyte
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN
+    privileged: true # needed for docker backups
+    ports:
+      - "4096:4096"
+    devices:
+      - /dev/fuse:/dev/fuse
+    environment:
+      - TZ=Europe/Berlin
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - zerobyte_data:/var/lib/zerobyte
+      - /var/lib/docker/volumes:/docker_volumes # backup source directory
+      #- ~/.config/rclone:/root/.config/rclone # rclone config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zerobyte.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.services.zerobyte.loadbalancer.server.port=4096"
+      - "traefik.http.routers.zerobyte.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+volumes:
+  zerobyte_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

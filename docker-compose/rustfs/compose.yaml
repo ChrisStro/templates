@@ -1,0 +1,37 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  rustfs:
+    <<: *default
+    image: 'rustfs/rustfs:latest'
+    environment:
+      - RUSTFS_SERVER_DOMAINS=$PUBLIC_HOSTNAME
+      - RUSTFS_CONSOLE_ENABLE=${RUSTFS_UI_ENABLE:-true}
+      - RUSTFS_SECRET_KEY=${RUSTFS_USER:-rustfsadmin}
+      - RUSTFS_ACCESS_KEY=${RUSTFS_PWD:-rustfsadmin}
+    volumes:
+      - ${RUSTFS_HOST_PATH:-rustfs_data}:/data # change owner to 1001:1001
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.rustfs.loadbalancer.server.port=9000"
+      - "traefik.http.routers.rustfs.service=rustfs"
+      - "traefik.http.routers.rustfs.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.rustfs.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.rustfs-ui.loadbalancer.server.port=9001"
+      - "traefik.http.routers.rustfs-ui.service=rustfs-ui"
+      - "traefik.http.routers.rustfs-ui.rule=Host(`${UI_PUBLIC_HOSTNAME:-ui$PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.rustfs-ui.entrypoints=${UI_TRAEFIK_ENTRYPOINTS:-websecure}"
+
+volumes:
+  rustfs_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
