@@ -15,7 +15,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.homepage.tls=true"
-      - "traefik.http.routers.homepage.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.homepage.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.routers.homepage.rule=Host(`$PUBLIC_HOSTNAME`)"
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
 

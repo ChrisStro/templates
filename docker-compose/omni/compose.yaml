@@ -1,0 +1,35 @@
+name: omni-on-prem
+services:
+  omni:
+    container_name: omni
+    image: "ghcr.io/siderolabs/omni:${OMNI_IMG_TAG}"
+    network_mode: "host"
+    devices:
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    command: >
+      --account-id=${OMNI_ACCOUNT_UUID}
+      --name=${NAME}
+      --cert=/tls.crt
+      --key=/tls.key
+      --machine-api-cert=/tls.crt
+      --machine-api-key=/tls.key
+      --private-key-source='file:///omni.asc'
+      --event-sink-port=${EVENT_SINK_PORT}
+      --bind-addr=${BIND_ADDR}
+      --machine-api-bind-addr=${MACHINE_API_BIND_ADDR}
+      --k8s-proxy-bind-addr=${K8S_PROXY_BIND_ADDR}
+      --advertised-api-url=${ADVERTISED_API_URL}
+      --advertised-kubernetes-proxy-url=${ADVERTISED_K8S_PROXY_URL}
+      --siderolink-api-advertised-url=${SIDEROLINK_ADVERTISED_API_URL}
+      --siderolink-wireguard-advertised-addr=${SIDEROLINK_WIREGUARD_ADVERTISED_ADDR}
+      --sqlite-storage-path=/sqlite/omni-sqlite.db
+      --initial-users=${INITIAL_USER_EMAILS}
+      ${AUTH}
+    volumes:
+      - ${ETCD_VOLUME_PATH}:/_out/etcd
+      - ${ETCD_ENCRYPTION_KEY}:/omni.asc
+      - ${TLS_CERT}:/tls.crt
+      - ${TLS_KEY}:/tls.key
+      - ${PWD}/sqlite:/sqlite

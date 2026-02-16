@@ -10,6 +10,8 @@ services:
   rustfs:
     <<: *default
     image: 'rustfs/rustfs:latest'
+    networks:
+      - proxy_network
     environment:
       - RUSTFS_SERVER_DOMAINS=$PUBLIC_HOSTNAME
       - RUSTFS_CONSOLE_ENABLE=${RUSTFS_UI_ENABLE:-true}
