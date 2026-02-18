@@ -13,10 +13,11 @@ services:
     networks:
       - proxy_network
     environment:
+      - TZ=${TZ:-Europe/Berlin}
       - RUSTFS_SERVER_DOMAINS=$PUBLIC_HOSTNAME
       - RUSTFS_CONSOLE_ENABLE=${RUSTFS_UI_ENABLE:-true}
-      - RUSTFS_SECRET_KEY=${RUSTFS_USER:-rustfsadmin}
-      - RUSTFS_ACCESS_KEY=${RUSTFS_PWD:-rustfsadmin}
+      - RUSTFS_SECRET_KEY=${RUSTFS_PWD:-rustfsadmin}
+      - RUSTFS_ACCESS_KEY=${RUSTFS_USER:-rustfsadmin}
     volumes:
       - ${RUSTFS_HOST_PATH:-rustfs_data}:/data # change owner to 1001:1001
     labels:
@@ -28,6 +29,7 @@ services:
       - "traefik.http.services.rustfs-ui.loadbalancer.server.port=9001"
       - "traefik.http.routers.rustfs-ui.service=rustfs-ui"
       - "traefik.http.routers.rustfs-ui.rule=Host(`${UI_PUBLIC_HOSTNAME:-ui$PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.rustfs-ui.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.routers.rustfs-ui.entrypoints=${UI_TRAEFIK_ENTRYPOINTS:-websecure}"
 
 volumes:

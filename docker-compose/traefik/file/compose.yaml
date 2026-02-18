@@ -1,0 +1,34 @@
+services:
+  traefik:
+    image: "traefik:latest"
+    restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    networks:
+      - proxy_network
+    ports:
+      # websecure
+      - "80:80"
+      - "443:443"
+      # websecure-internal
+      - "880:880"
+      - "4443:4443"
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - --configFile=/etc/traefik/traefik_config.yaml
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./traefik.yaml:/etc/traefik/traefik_config.yaml:ro
+      - ./fileprovider.yaml:/fileprovider/config.yaml:ro
+      - ./letsencrypt:/letsencrypt
+      - ./traefik/logs:/var/log/traefik
+
+volumes:
+  traefik_certs:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

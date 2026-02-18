@@ -1,0 +1,54 @@
+api:
+  insecure: true
+  dashboard: true
+
+providers:
+  file:
+    filename: "/fileprovider/config.yaml"
+  # docker:
+  #   endpoint: "unix:///var/run/docker.sock"
+  #   exposedByDefault: false
+
+# experimental:
+#   plugins:
+#     geoblock:
+#       moduleName: "github.com/PascalMinder/geoblock"
+#       version: "v0.3.3"
+
+log:
+  level: "INFO"
+  format: "common"
+  # maxSize: 100
+  # maxBackups: 3
+  # maxAge: 3
+  # compress: true
+
+# certificatesResolvers:
+#   letsencrypt:
+#     acme:
+#      httpChallenge:
+#        entryPoint: web
+#       # dnsChallenge:
+#       #   provider: "cloudflare"
+#       email: "certs@127.0.0.1.nip.io"
+#       storage: "/letsencrypt/acme.json"
+#       caServer: "https://acme-v02.api.letsencrypt.org/directory"
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+    transport:
+      respondingTimeouts:
+        readTimeout: "30m"
+    http:
+      tls:
+        # certResolver: "letsencrypt"
+        options: "default"
+
+serversTransport:
+  insecureSkipVerify: true
+
+ping:
+  entryPoint: "web"
