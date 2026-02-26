@@ -1,9 +1,16 @@
 services:
   runner:
     image: gitea/act_runner:latest
+    networks:
+      - proxy_network
     environment:
       GITEA_INSTANCE_URL: $GITEA_INSTANCE_URL
       GITEA_RUNNER_REGISTRATION_TOKEN: $TOKEN
       GITEA_RUNNER_NAME: "$RUNNER_NAME"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
