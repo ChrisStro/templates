@@ -21,6 +21,12 @@ services:
       - /dev/fuse:/dev/fuse
     environment:
       - TZ=Europe/Berlin
+      - BASE_URL=https://$PUBLIC_HOSTNAME
+      - TRUSTED_ORIGINS=${TRUSTED_ORIGINS:-https://$PUBLIC_HOSTNAME}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - APP_SECRET=$APP_SECRET
+      # - RCLONE_CONFIG_DIR=/root/.config/rclone
+      # - RESTIC_HOSTNAME=zerobyte
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - zerobyte_data:/var/lib/zerobyte
