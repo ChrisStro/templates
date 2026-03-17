@@ -1,0 +1,43 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  pocket-id:
+    <<: *default
+    image: ghcr.io/pocket-id/pocket-id:${IMAGE_TAG:-v2}
+    restart: unless-stopped    
+    networks:
+      - proxy_network
+    volumes:
+      - data:/app/data    
+    healthcheck:
+      test: [ "CMD", "/app/pocket-id", "healthcheck" ]
+      interval: 1m30s
+      timeout: 5s
+      retries: 2
+      start_period: 10s
+    env_file: .env
+    environment:
+      APP_URL: https://${PUBLIC_HOSTNAME}
+      ANALYTICS_DISABLED: ${ANALYTICS_DISABLED:-true}
+      TRUST_PROXY: ${TRUST_PROXY:-true}      
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}      
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.pocketid.loadbalancer.server.port=1411"
+      - "traefik.http.routers.pocketid.service=pocketid"
+      - "traefik.http.routers.pocketid.rule=Host(`${PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.pocketid.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+volumes:
+  data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

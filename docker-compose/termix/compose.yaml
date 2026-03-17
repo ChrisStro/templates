@@ -1,0 +1,57 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  termix:
+    <<: *default
+    image: ghcr.io/lukegus/termix:latest
+    container_name: termix    
+    ports:
+      - '8080:8080'
+    volumes:
+      - termix-data:/app/data
+    environment:
+      PORT: '8080'
+      GUACD_HOST: guacd
+      GUACD_PORT: '4822'
+    depends_on:
+      - guacd
+    networks:
+      - termix-net
+      - proxy_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_network"
+      - "traefik.http.services.termix.loadbalancer.server.port=8080"
+      - "traefik.http.routers.termix.service=termix"
+      - "traefik.http.routers.termix.rule=Host(`${PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.termix.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+  guacd:
+    <<: *default
+    image: guacamole/guacd:latest
+    container_name: guacd    
+    ports:
+      - "4822:4822"
+    networks:
+      - termix-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.guacd.loadbalancer.server.port=4822"
+      - "traefik.http.routers.guacd.service=guacd"
+      - "traefik.http.routers.guacd.rule=Host(`gc${PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.guacd.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+volumes:
+  termix-data:
+
+networks:
+  termix-net:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
