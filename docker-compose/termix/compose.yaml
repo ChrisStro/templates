@@ -21,8 +21,7 @@ services:
       GUACD_PORT: '4822'
     depends_on:
       - guacd
-    networks:
-      - termix-net
+    networks:      
       - proxy_network
     labels:
       - "traefik.enable=true"
@@ -39,7 +38,7 @@ services:
     ports:
       - "4822:4822"
     networks:
-      - termix-net
+      - proxy_network
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.guacd.loadbalancer.server.port=4822"
@@ -50,8 +49,7 @@ services:
 volumes:
   termix-data:
 
-networks:
-  termix-net:
+networks:  
   proxy_network:
     name: $PROXY_NETWORK
     external: true
