@@ -1,0 +1,61 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  mailarchive-app:
+    <<: *default
+    image: s1t5/mailarchiver:latest    
+    environment:      
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=MailArchiver;Username=mailuser;Password=${DB_PASS:-masterkey};
+      - Authentication__Username=${MAILARCHIVER_USER:-admin}
+      - Authentication__Password=${MAILARCHIVER_PASS:-changeme}      
+      - TimeZone__DisplayTimeZoneId=${TIMEZONE:-Europe/Berlin}
+    networks:
+      - postgres
+      - proxy_network
+    volumes:
+      - protection-keys:/app/DataProtection-Keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.services.mailarchive-app.loadbalancer.server.port=5000"
+      - "traefik.http.routers.mailarchive-app.service=mailarchive-app"
+      - "traefik.http.routers.mailarchive-app.rule=Host(`${PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.mailarchive-app.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+  postgres:
+    <<: *default
+    image: postgres:17-alpine    
+    networks:
+      - postgres
+    environment:
+      POSTGRES_DB: MailArchiver
+      POSTGRES_USER: mailuser
+      POSTGRES_PASSWORD: ${DB_PASS:-masterkey}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mailuser -d MailArchiver"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres:
+  protection-keys:
+
+networks:
+  postgres:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
+    
