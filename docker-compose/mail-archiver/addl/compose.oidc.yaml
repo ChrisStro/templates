@@ -1,0 +1,15 @@
+services:
+  mailarchive-app:
+    environment:
+      # OIDC Configuration (see OIDC_Implementation.md for detailed setup)
+      - OAuth__Enabled=true
+      - OAuth__Authority=$OIDC_ISSUER_URL
+      - OAuth__ClientId=$OIDC_CLIENT_ID
+      - OAuth__ClientSecret=$OIDC_CLIENT_SECRET
+      - OAuth__ClientScopes__0=openid
+      - OAuth__ClientScopes__1=profile
+      - OAuth__ClientScopes__2=email
+      - OAuth__DisablePasswordLogin=${DISABLE_PASSWORD_LOGIN:-false}
+      - OAuth__AutoRedirect=${OIDC_AUTO_REDIRECT:-false}
+      - OAuth__AutoApproveUsers=${OIDC_AUTO_APPROVE_USERS:-true}
+      - OAuth__AdminEmails__0=$OIDC_ADMIN_EMAIL

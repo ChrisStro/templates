@@ -1,0 +1,13 @@
+volumes:
+  postgres:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/mail-archiver/pg_data
+  protection-keys:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/mail-archiver/prot_key
