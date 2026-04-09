@@ -1,0 +1,15 @@
+http:
+  routers:    
+    ollama:
+      # rule: "Host(`ollama.127.0.0.1.nip.io`) && Header(`Authorization`, `Bearer {{ env "API_BEARER_TOKEN" }}`)"
+      rule: "Host(`ollama.127.0.0.1.nip.io`)"
+      service: ollama
+      entryPoints:
+        - "websecure"
+      tls: {} # Explizites TLS (nutzt Default Cert)
+
+  services:
+    ollama:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:11434"

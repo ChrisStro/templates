@@ -1,0 +1,39 @@
+http:
+  routers:
+    nc-aio:
+      rule: "Host(`ncaio.local.mydomain.net`)"
+      entrypoints:
+        - "websecure-internal"
+      service: nc-aio
+    nextcloud:
+      rule: "Host(`ncloud.public.mydomain.net`)"
+      entrypoints:
+        - "websecure"
+        - "websecure-internal"
+      service: nextcloud
+      middlewares:
+        - nextcloud-chain
+  services:
+    nc-aio:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.250.11:8080"
+    nextcloud:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.250.11:11000"
+  
+  middlewares:
+    nextcloud-chain:
+      chain:
+        middlewares:
+          - https-redirect
+          - nextcloud-secure-headers
+    nextcloud-secure-headers:
+      headers:
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        referrerPolicy: "same-origin"
+    https-redirect:
+      redirectscheme:
+        scheme: https

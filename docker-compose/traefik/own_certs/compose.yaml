@@ -17,7 +17,8 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
       - "--providers.file=true"
-      - "--providers.file.filename=/fileprovider/config.yml"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
       # Traefik settings
       - "--log.level=info" # level: debug, info, warning, error, critical
       - "--global.checkNewVersion=true"
@@ -43,14 +44,12 @@ services:
       - "--api.insecure=false"
     security_opt:
       - no-new-privileges:true
-    configs:
-      - source: fileprovider
-        target: /fileprovider/config.yml
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${UNIX_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
       - $OWN_CERT_FILE:/etc/certs/cert.pem
       - $OWN_KEY_FILE:/etc/certs/key.pem
+      - ./dynamic:/etc/traefik/dynamic:ro      
     logging:
       driver: "json-file"
       options:
@@ -62,33 +61,6 @@ services:
       - "traefik.http.routers.traefik.rule=Host(`t.$DOMAINNAME`)"
       # important middleware
       # - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
-
-configs:
-  fileprovider:
-    content: |
-      tls:
-        stores:
-          default:
-            defaultCertificate:
-              certFile: /etc/certs/cert.pem
-              keyFile: /etc/certs/key.pem
-        certificates:
-          - certFile: /etc/certs/cert.pem
-            keyFile: /etc/certs/key.pem
-        options:
-          default:
-            minVersion: VersionTLS12
-            cipherSuites:
-            # Recommended ciphers for TLSv1.2
-            - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-            - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-            - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
-            # Recommended ciphers for TLSv1.3
-            - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-            - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-            - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
-          tlsv13only:
-            minVersion: VersionTLS13
 
 networks:
   proxy_network:
