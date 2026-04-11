@@ -1,12 +1,28 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
 services:
   uptime-kuma:
-    image: louislam/uptime-kuma:1
-    container_name: uptime-kuma
+    <<: *default
+    image: louislam/uptime-kuma:2
     restart: unless-stopped
     networks:
       - proxy_network
+    environment:
+      - TZ=Europe/Berlin    
     volumes:
       - uptime-kuma:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.kuma.rule=Host(`$PUBLIC_HOSTNAME`)"
