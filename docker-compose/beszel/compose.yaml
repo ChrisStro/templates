@@ -15,6 +15,7 @@ services:
     environment:
       - TZ=Europe/Berlin
       - APP_URL=https://$PUBLIC_HOSTNAME
+      - DISABLE_PASSWORD_AUTH=$DISABLE_PASSWORD_AUTH
     volumes:
       - beszel_data:/beszel_data      
     healthcheck:
@@ -26,7 +27,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.beszel.rule=Host(`$PUBLIC_HOSTNAME`)"
-      - "traefik.http.routers.beszel.entrypoints=$PUBLIC_ENTRYPOINTS"
+      - "traefik.http.routers.beszel.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.beszel.loadbalancer.server.port=8090"
 
 volumes:
