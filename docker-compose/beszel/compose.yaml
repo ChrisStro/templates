@@ -18,16 +18,11 @@ services:
       - DISABLE_PASSWORD_AUTH=$DISABLE_PASSWORD_AUTH
     volumes:
       - beszel_data:/beszel_data      
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090"]
-      interval: 30s
-      retries: 3
-      start_period: 10s
-      timeout: 5s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.beszel.rule=Host(`$PUBLIC_HOSTNAME`)"
       - "traefik.http.routers.beszel.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.beszel.service=beszel"
       - "traefik.http.services.beszel.loadbalancer.server.port=8090"
 
 volumes:
