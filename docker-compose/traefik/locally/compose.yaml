@@ -30,7 +30,7 @@ services:
       # SSL Ciphers
       - "--entrypoints.websecure.http.tls.options=default"
       # middlewares
-      - "--entrypoints.websecure.http.middlewares=hsts-header"
+      - "--entrypoints.websecure.http.middlewares=hsts-header@file"
       # Enable dashboard
       - "--api=true"
       - "--api.dashboard=$DASHBOARDENABLED"
@@ -49,10 +49,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure-internal}"
       - "traefik.http.routers.traefik.rule=Host(`t.$DOMAINNAME`)"
-      # important middleware
-      - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
 
 configs:
   fileprovider:
@@ -72,6 +70,13 @@ configs:
             - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
           tlsv13only:
             minVersion: VersionTLS13
+      http:
+        middlewares:
+          hsts-header:
+            headers:
+              stsSeconds: 63072000
+              forceSTSHeader: true
+              stsIncludeSubdomains: true
 
 volumes:
   traefik_certs:

@@ -37,7 +37,7 @@ services:
       # SSL Ciphers
       - "--entrypoints.websecure.http.tls.options=default" # from fileprovider
       # middlewares
-      # - "--entrypoints.websecure.http.middlewares=hsts-header@docker"
+      # - "--entrypoints.websecure.http.middlewares=hsts-header@file"
       # Enable dashboard
       - "--api=true"
       - "--api.dashboard=$DASHBOARDENABLED"
@@ -59,8 +59,6 @@ services:
       - "traefik.http.routers.traefik.service=api@internal"
       - "traefik.http.routers.traefik.entrypoints=websecure-internal"
       - "traefik.http.routers.traefik.rule=Host(`t.$DOMAINNAME`)"
-      # important middleware
-      # - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
 
 networks:
   proxy_network:

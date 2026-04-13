@@ -58,8 +58,8 @@ services:
       - "--entrypoints.websecure.http.tls.options=default" # from fileprovider
       - "--entrypoints.websecure-internal.http.tls.options=default" # from fileprovider
       # middlewares
-      - "--entrypoints.websecure.http.middlewares=hsts-header@docker"
-      - "--entrypoints.websecure-internal.http.middlewares=hsts-header@docker"
+      - "--entrypoints.websecure.http.middlewares=hsts-header@file"
+      - "--entrypoints.websecure-internal.http.middlewares=hsts-header@file"
       # enable dashboard
       - "--api=true"
       - "--api.dashboard=$DASHBOARDENABLED"
@@ -84,7 +84,6 @@ services:
       - "traefik.http.routers.traefik-secure.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure-internal}"
       - "traefik.http.routers.traefik-secure.rule=Host(`t.$DOMAINNAME`)"
       # important middleware
-      - "traefik.http.middlewares.hsts-header.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000"
       # - "traefik.http.middlewares.traefik-auth.basicauth.users=$BASIC_AUTH_LOGIN"
       # - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
       # - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
@@ -107,6 +106,13 @@ configs:
             - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
           tlsv13only:
             minVersion: VersionTLS13
+      http:
+        middlewares:
+          hsts-header:
+            headers:
+              stsSeconds: 63072000
+              forceSTSHeader: true
+              stsIncludeSubdomains: true
 
 volumes:
   traefik_certs:
