@@ -1,0 +1,22 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  hawser:
+    <<: *default
+    image: ghcr.io/finsys/hawser:latest
+    container_name: hawser-edge
+    network_mode: host
+    environment:
+      DOCKHAND_SERVER_URL: wss://$DOCKHAND_SERVER/api/hawser/connect
+      TOKEN: $TOKEN
+      TLS_SKIP_VERIFY: ${TLS_SKIP_VERIFY:-false}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/stacks:/data/stacks
+      - /opt/stacks:/opt/stacks

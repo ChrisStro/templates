@@ -1,0 +1,21 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  hawser:
+    <<: *default
+    image: ghcr.io/finsys/hawser:latest
+    container_name: hawser
+    ports:
+      - "2376:2376" # Optional, falls du auf die Hawser UI zugreifen möchtest
+    environment:
+      TOKEN: $TOKEN
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/stacks:/data/stacks
+      - /opt/stacks:/opt/stacks

@@ -1,0 +1,35 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  dockhand:
+    <<: *default
+    image: ghcr.io/fnsys/dockhand:latest
+    container_name: dockhand
+    networks:
+      - proxy_network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dockhand_data:/app/data
+      - /opt/stacks:/opt/stacks
+      - /opt/stacks:/app/data/stacks
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.dockhand.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.dockhand.tls=true"
+      - "traefik.http.routers.dockhand.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.dockhand.loadbalancer.server.port=3000"
+
+volumes:
+  dockhand_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
