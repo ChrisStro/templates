@@ -1,0 +1,39 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  beszel:
+    <<: *default
+    image: henrygd/beszel    
+    networks:
+      - proxy_network      
+    environment:
+      - TZ=Europe/Berlin
+      - APP_URL=https://$PUBLIC_HOSTNAME
+    volumes:
+      - beszel_data:/beszel_data      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.beszel.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.beszel.entrypoints=$PUBLIC_ENTRYPOINTS"
+      - "traefik.http.services.beszel.loadbalancer.server.port=8090"
+
+volumes:
+  beszel_data:  
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
+  backend_network:
