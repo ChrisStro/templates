@@ -14,8 +14,8 @@ services:
     networks:
       - default
       - proxy_network
-    # ports:
-    #   - "10051:10051"
+    ports:
+      - "10051:10051"
     environment:
       DB_SERVER_HOST: zabbix-db
       POSTGRES_USER: zabbix
