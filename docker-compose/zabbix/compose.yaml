@@ -71,6 +71,7 @@ services:
     image: zabbix/zabbix-agent:latest
     environment:
       ZBX_SERVER_HOST: ${ZABBIX_SERVER_NAME:-zabbix-server}
+      ZBX_SERVER_ACTIVE: zabbix-server
       ZBX_HOSTNAME: "Zabbix server"
     ports:
       - "10050:10050"
