@@ -70,7 +70,7 @@ services:
     <<: *default
     image: zabbix/zabbix-agent:latest
     environment:
-      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_HOST: 0.0.0.0/0
       ZBX_HOSTNAME: "Zabbix server"
     ports:
       - "10050:10050"
