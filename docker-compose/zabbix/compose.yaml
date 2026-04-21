@@ -23,7 +23,7 @@ services:
       ZBX_JAVAGATEWAY_ENABLE: "false"
     volumes:
       - zabbix_server_data:/var/lib/zabbix
-      - ${CERTS_HOSTPATH:-zabbix_certs}:/usr/share/zabbix/ssl
+      - ${CERTS_HOSTPATH:-zabbix_certs}:/var/lib/zabbix/ssl
 
   zabbix-web:
     <<: *default
