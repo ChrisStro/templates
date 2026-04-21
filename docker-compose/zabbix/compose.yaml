@@ -23,12 +23,7 @@ services:
       ZBX_JAVAGATEWAY_ENABLE: "false"
     volumes:
       - zabbix_server_data:/var/lib/zabbix
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=$PROXY_NETWORK
-      - traefik.http.routers.zabbix-server.rule=Host(`$SERVER_HOSTNAME`)
-      - traefik.http.routers.zabbix-server.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
-      - traefik.http.services.zabbix-server.loadbalancer.server.port=10051
+      - ${CERTS_HOSTPATH:-zabbix_certs}:/usr/share/zabbix/ssl
 
   zabbix-web:
     <<: *default
@@ -50,7 +45,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=$PROXY_NETWORK
-      - traefik.http.routers.zabbix-ui.rule=Host(`$WEBUI_HOSTNAME`)
+      - traefik.http.routers.zabbix-ui.rule=Host(`$PUBLIC_HOSTNAME`)
       - traefik.http.routers.zabbix-ui.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}
       - traefik.http.services.zabbix-ui.loadbalancer.server.port=8080
 
@@ -70,7 +65,7 @@ services:
     <<: *default
     image: zabbix/zabbix-agent:latest
     environment:
-      ZBX_SERVER_HOST: ${ZABBIX_SERVER_NAME:-zabbix-server}
+      ZBX_SERVER_HOST: zabbix-server
       ZBX_SERVER_ACTIVE: zabbix-server
       ZBX_HOSTNAME: "Zabbix server"
     ports:
@@ -79,6 +74,7 @@ services:
 volumes:
   zabbix_server_data:
   zabbix_db_data:
+  zabbix_certs:
 
 networks:
   proxy_network:
