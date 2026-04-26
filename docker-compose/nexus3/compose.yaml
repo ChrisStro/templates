@@ -1,8 +1,16 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
 services:
   nexus3:
-    image: sonatype/nexus3
-    container_name: nexus
-    restart: unless-stopped
+    <<: *default
+    image: sonatype/nexus3:3.68.0
+    container_name: nexus    
     networks:
       - proxy_network
     volumes:
