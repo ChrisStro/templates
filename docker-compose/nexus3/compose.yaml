@@ -9,7 +9,7 @@ x-default: &default
 services:
   nexus3:
     <<: *default
-    image: sonatype/nexus3:3.68.0
+    image: sonatype/nexus3:${NEXUS_VERSION:-latest}
     container_name: nexus    
     networks:
       - proxy_network
