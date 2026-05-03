@@ -1,0 +1,35 @@
+tcp:
+  serversTransports:
+    pangolin-tcp-transport:
+      proxyProtocol:
+        version: 2
+  routers:
+    pangolin-https:
+      rule: HostSNIRegexp(`^.+\.tun\.mydomain\.de$`) || HostSNIRegexp(`^.+\.mydomain\.de$`)
+      tls:
+        passthrough: true
+      entryPoints:
+        - "websecure"
+      service: pangolin-https
+
+  services:
+    pangolin-https:
+      loadBalancer:
+        servers:
+          - address: "10.9.240.59:443"
+        serversTransport: pangolin-tcp-transport
+
+
+http:
+  routers:
+    pangolin-http:
+      rule: HostRegexp(`^.+\.tun\.mydomain\.de$`) || HostRegexp(`^.+\.tun\.mydomain\.de$`)
+      entryPoints:
+        - "web"
+      service: pangolin-http
+
+  services:
+    pangolin-http:
+      loadBalancer:
+        servers:
+          - url: "http://10.9.240.59"

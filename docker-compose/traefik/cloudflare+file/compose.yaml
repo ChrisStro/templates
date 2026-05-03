@@ -1,0 +1,96 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  traefik:
+    <<: *default
+    image: "traefik:latest"
+    container_name: "traefik"    
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    networks:
+      - proxy_network
+    ports:
+      - "80:80"
+      - "880:880"
+      - "443:443"
+      - "4443:4443"
+    command:
+      # provider setup docker/file
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false" # Default is true
+      - "--providers.file.watch=true"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      #- "--providers.file.filename=/fileprovider/config.yml"
+      # Traefik settings
+      - "--log.level=INFO" # level: debug, info, warning, error, critical
+      - "--global.checkNewVersion=true"
+      - "--global.sendAnonymousUsage=false"
+      - "--serversTransport.insecureSkipVerify=true" # when forwarding to selfsigned
+      # Certificate resolver cloudflare
+      - "--certificatesResolvers.cf-staging.acme.email=$CF_API_EMAIL"
+      - "--certificatesResolvers.cf-staging.acme.storage=/cloudflare/acme.json"
+      - "--certificatesResolvers.cf-staging.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory" # default is production
+      - "--certificatesResolvers.cf-staging.acme.dnsChallenge.provider=cloudflare"
+      - "--certificatesResolvers.cf-staging.acme.dnsChallenge.resolvers[0]=1.1.1.1:53"
+      - "--certificatesResolvers.cf-staging.acme.dnsChallenge.resolvers[1]=1.0.0.1:53"
+      - "--certificatesResolvers.cf-production.acme.email=$CF_API_EMAIL"
+      - "--certificatesResolvers.cf-production.acme.storage=/cloudflare/acme.json"
+      - "--certificatesResolvers.cf-production.acme.dnsChallenge.provider=cloudflare"
+      - "--certificatesResolvers.cf-production.acme.dnsChallenge.resolvers[0]=1.1.1.1:53"
+      - "--certificatesResolvers.cf-production.acme.dnsChallenge.resolvers[1]=1.0.0.1:53"
+      # Configure default entrypoints
+      - "--entrypoints.web.address=:880"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:4443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certResolver=cf-$CF_STAGING_OR_PRODUCTION"
+      - "--entrypoints.websecure.http.tls.domains[0].main=$DOMAINNAME"
+      - "--entrypoints.websecure.http.tls.domains[0].sans=*.$DOMAINNAME"
+      # Configure internal only entrypoints
+      - "--entrypoints.web-internal.address=:80"
+      - "--entrypoints.web-internal.http.redirections.entrypoint.to=websecure-internal"
+      - "--entrypoints.web-internal.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure-internal.address=:443"
+      - "--entrypoints.websecure-internal.http.tls=true"
+      - "--entrypoints.websecure-internal.http.tls.certResolver=cf-$CF_STAGING_OR_PRODUCTION"
+      - "--entrypoints.websecure-internal.http.tls.domains[0].main=$DOMAINNAME"
+      - "--entrypoints.websecure-internal.http.tls.domains[0].sans=*.$DOMAINNAME"
+      # SSL Ciphers
+      - "--entrypoints.websecure.http.tls.options=default" # from fileprovider
+      - "--entrypoints.websecure-internal.http.tls.options=default" # from fileprovider
+      # enable dashboard
+      - "--api=true"
+      - "--api.dashboard=$DASHBOARDENABLED"
+      - "--api.insecure=false"
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CF_API_EMAIL=$CF_API_EMAIL
+      - CF_DNS_API_TOKEN=$CF_DNS_API_TOKEN
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${UNIX_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - traefik_certs:/cloudflare
+      - ./dynamic:/etc/traefik/dynamic:ro
+    labels:
+      # https part
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.traefik-secure.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure-internal}"
+      - "traefik.http.routers.traefik-secure.rule=Host(`t.$DOMAINNAME`)"
+
+volumes:
+  traefik_certs:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
