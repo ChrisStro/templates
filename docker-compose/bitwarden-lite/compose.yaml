@@ -1,0 +1,34 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  bitwarden:
+    <<: *default
+    image: ghcr.io/bitwarden/lite
+    #container_name: bw-lite-app
+    networks:
+      - proxy_network
+    env_file:
+      - .env
+    volumes:
+      - bitwarden:/etc/bitwarden
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bitwardenlite.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.bitwardenlite.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.bitwardenlite.tls=true"
+      #- "traefik.http.services.bitwardenlite.loadbalancer.server.scheme=https"
+      - "traefik.http.services.bitwardenlite.loadbalancer.server.port=8080"
+
+volumes:
+  bitwarden:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
