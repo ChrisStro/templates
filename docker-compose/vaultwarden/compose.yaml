@@ -7,8 +7,13 @@ services:
       - proxy_network
     volumes:
       - "vaultwarden_data:/data"
-    environment:
-      - ADMIN_TOKEN=$ADMIN_TOKEN
+    env_file:
+      - .env
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '500m'
+        max-file: '2'
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.vaultwarden.rule=Host(`$PUBLIC_HOSTNAME`)"
