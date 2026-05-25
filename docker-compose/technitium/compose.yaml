@@ -26,8 +26,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.technitium.rule=Host(`$PUBLIC_HOSTNAME`)"
-      - "traefik.http.routers.technitium.entrypoints=websecure"
-      - "traefik.http.routers.technitium.tls.certresolver=myresolver"
+      - "traefik.http.routers.technitium.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.technitium.loadbalancer.server.port=5380"
     sysctls:
       - net.ipv4.ip_local_port_range=1024 65000
