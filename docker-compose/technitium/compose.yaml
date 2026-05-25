@@ -1,0 +1,41 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  dns-server:
+    <<: *default
+    image: technitium/dns-server:latest
+    container_name: technitium-dns
+    hostname: technitium-dns
+    environment:
+      - DNS_SERVER_ADMIN_PASSWORD=$DNS_SERVER_ADMIN_PASSWORD
+      - TZ=$TZ
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "853:853/tcp" # DNS-over-TLS
+    volumes:
+      - config:/etc/dns/config
+    networks:
+      - proxy_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.technitium.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.technitium.entrypoints=websecure"
+      - "traefik.http.routers.technitium.tls.certresolver=myresolver"
+      - "traefik.http.services.technitium.loadbalancer.server.port=5380"
+    sysctls:
+      - net.ipv4.ip_local_port_range=1024 65000
+
+volumes:
+  config:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
