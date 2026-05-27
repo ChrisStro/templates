@@ -1,10 +1,11 @@
 api:
   insecure: true
-  dashboard: true
+  dashboard: false
 
 providers:
   file:
-    filename: "/fileprovider/config.yaml"
+    directory: "/etc/traefik/dynamic"
+    watch: true
   # docker:
   #   endpoint: "unix:///var/run/docker.sock"
   #   exposedByDefault: false
@@ -26,13 +27,16 @@ log:
 # certificatesResolvers:
 #   letsencrypt:
 #     acme:
-#      httpChallenge:
-#        entryPoint: web
-#       # dnsChallenge:
-#       #   provider: "cloudflare"
 #       email: "certs@127.0.0.1.nip.io"
 #       storage: "/letsencrypt/acme.json"
-#       caServer: "https://acme-v02.api.letsencrypt.org/directory"
+#       caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
+      #httpChallenge:
+      #  entryPoint: web
+      #dnsChallenge:
+      #  provider: "cloudflare"      
+      #  resolvers:
+      #    - "1.1.1.1:53"
+      #    - "8.8.8.8:53"
 
 entryPoints:
   web:
@@ -44,8 +48,12 @@ entryPoints:
         readTimeout: "30m"
     http:
       tls:
-        # certResolver: "letsencrypt"
+        certResolver: "letsencrypt"
         options: "default"
+        domains:
+          - main: "example.com"
+            sans:
+              - "*.example.com"
 
 serversTransport:
   insecureSkipVerify: true

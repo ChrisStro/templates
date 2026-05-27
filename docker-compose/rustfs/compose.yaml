@@ -10,6 +10,7 @@ services:
   rustfs:
     <<: *default
     image: 'rustfs/rustfs:latest'
+    user: "1001:1001"
     networks:
       - proxy_network
     environment:
@@ -29,8 +30,7 @@ services:
       - "traefik.http.services.rustfs-ui.loadbalancer.server.port=9001"
       - "traefik.http.routers.rustfs-ui.service=rustfs-ui"
       - "traefik.http.routers.rustfs-ui.rule=Host(`${UI_PUBLIC_HOSTNAME:-ui$PUBLIC_HOSTNAME}`)"
-      - "traefik.http.routers.rustfs-ui.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
-      - "traefik.http.routers.rustfs-ui.entrypoints=${UI_TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.rustfs-ui.entrypoints=${UI_TRAEFIK_ENTRYPOINTS:-$TRAEFIK_ENTRYPOINTS}"
 
 volumes:
   rustfs_data:

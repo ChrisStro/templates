@@ -1,0 +1,41 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  adguardhome:
+    <<: *default
+    image: adguard/adguardhome:latest
+    container_name: adguard
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "784:784/udp" # DNS-over-QUIC (optional)
+      - "853:853/tcp" # DNS-over-TLS (optional)
+      - "3000:3000/tcp" # Erstinstallation / Setup-UI
+    volumes:
+      - workdir:/opt/adguardhome/work
+      - confdir:/opt/adguardhome/conf
+    networks:
+      - proxy_network
+    labels:
+      - "traefik.enable=true"
+      # Das Frontend (Web-UI) über Traefik erreichbar machen
+      - "traefik.http.routers.adguard.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.adguard.entrypoints=websecure"
+      - "traefik.http.routers.adguard.tls.certresolver=myresolver" # Dein Traefik Cert-Resolver
+      # AdGuard nutzt intern Port 80 für das Dashboard nach dem Setup
+      - "traefik.http.services.adguard.loadbalancer.server.port=80"
+
+volumes:
+  workdir:
+  confdir:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true   

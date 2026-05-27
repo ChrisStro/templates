@@ -49,7 +49,7 @@ services:
       - ${UNIX_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
       - $OWN_CERT_FILE:/etc/certs/cert.pem
       - $OWN_KEY_FILE:/etc/certs/key.pem
-      - ./dynamic:/etc/traefik/dynamic:ro      
+      - ./dynamic:/etc/traefik/dynamic:ro
     logging:
       driver: "json-file"
       options:

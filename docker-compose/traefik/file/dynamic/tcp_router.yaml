@@ -1,0 +1,15 @@
+tcp:
+  routers:
+    tactical:
+      # rule: HostSNI(`dash.rmm.mydomain.net`)
+      rule: HostSNIRegexp(`^.+\.rmm\.mydomain\.net$`)
+      tls:
+        passthrough: true
+      entrypoints:
+        - "websecure"
+      service: tactical
+  services:
+    tactical:
+      loadBalancer:
+        servers:
+          - address: "192.168.55.40:443"
