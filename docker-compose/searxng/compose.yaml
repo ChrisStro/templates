@@ -30,6 +30,7 @@ services:
       - SEARXNG_SECRET_KEY=$SEARXNG_SECRET_KEY
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
       - "traefik.http.routers.searxng.rule=Host(`$PUBLIC_HOSTNAME`)"
       - "traefik.http.routers.searxng.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"      
       - "traefik.http.services.searxng.loadbalancer.server.port=8080"
