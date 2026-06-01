@@ -21,6 +21,7 @@ services:
       POSTGRES_USER: zabbix
       POSTGRES_PASSWORD: $POSTGRES_PASSWORD
       ZBX_JAVAGATEWAY_ENABLE: "false"
+      ZBX_VALUECACHESIZE: ${ZBX_VALUECACHESIZE:-128M}
     volumes:
       - zabbix_server_data:/var/lib/zabbix
       - ${CERTS_HOSTPATH:-zabbix_certs}:/var/lib/zabbix/ssl
