@@ -9,20 +9,24 @@ x-default: &default
 services:
   zerobyte:
     <<: *default
-    image: ghcr.io/nicotsx/zerobyte:v0.19
+    image: ghcr.io/nicotsx/zerobyte:latest
     container_name: zerobyte
-    restart: unless-stopped
+    networks:
+      - proxy_network
     cap_add:
       - SYS_ADMIN
     privileged: true # needed for docker backups
-    ports:
-      - "4096:4096"
-    devices:
-      - /dev/fuse:/dev/fuse
+    #ports:
+    #  - "4096:4096"
+    #devices:
+    #  - /dev/fuse:/dev/fuse
+    env_file:
+      - .env
     environment:
       - TZ=Europe/Berlin
       - BASE_URL=https://$PUBLIC_HOSTNAME
       - TRUSTED_ORIGINS=${TRUSTED_ORIGINS:-https://$PUBLIC_HOSTNAME}
+      - TRUST_PROXY=${TRUST_PROXY:-true}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - APP_SECRET=$APP_SECRET
       # - RCLONE_CONFIG_DIR=/root/.config/rclone
@@ -30,7 +34,8 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - zerobyte_data:/var/lib/zerobyte
-      - /var/lib/docker/volumes:/docker_volumes # backup source directory
+      - /mnt:/mnt
+      - /opt/stacks:/opt/stacks
       #- ~/.config/rclone:/root/.config/rclone # rclone config
     labels:
       - "traefik.enable=true"
