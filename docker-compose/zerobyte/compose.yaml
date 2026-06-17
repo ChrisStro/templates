@@ -29,8 +29,6 @@ services:
       - TRUST_PROXY=${TRUST_PROXY:-true}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - APP_SECRET=$APP_SECRET
-      # - RCLONE_CONFIG_DIR=/root/.config/rclone
-      # - RESTIC_HOSTNAME=zerobyte
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - zerobyte_data:/var/lib/zerobyte
