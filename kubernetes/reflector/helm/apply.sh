@@ -1,7 +1,7 @@
 #!/bin/bash
 CHART_NAME="reflector"
 REPO_NAME="emberstack"
-NAMESPACE="my-reflector"
+NAMESPACE="reflector-system"
 
 # scriptvars
 SCRIPT_PATH=${BASH_SOURCE[0]}

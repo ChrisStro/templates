@@ -23,7 +23,6 @@ spec:
     solvers:
     - dns01:
         cloudflare:
-          email: my-cloudflare-acc@example.com
           apiTokenSecretRef:
             name: cf-dns-api-token
             key: api-token
@@ -42,7 +41,6 @@ spec:
     solvers:
     - dns01:
         cloudflare:
-          email: my-cloudflare-acc@example.com
           apiTokenSecretRef:
             name: cf-dns-api-token
             key: api-token

@@ -1,0 +1,38 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: traefik-dashboard
+  namespace: traefik-system
+spec:
+  selector:
+    app.kubernetes.io/name: traefik
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: traefik-dashboard-ingress
+  namespace: traefik-system
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  rules:
+  - host: t.local.127.0.0.1.sslip.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: traefik-dashboard
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - t.local.127.0.0.1.sslip.io
+    secretName: san-cert-local-secret

@@ -1,0 +1,68 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  portabase:
+    <<: *default
+    container_name: portabase-app
+    image: portabase/portabase:latest
+    networks:
+      - "proxy_network"
+      - "backend"
+    environment:
+      - TZ=Europe/Paris
+      - PROJECT_URL=https://$PUBLIC_HOSTNAME
+      - PROJECT_SECRET=$PROJECT_SECRET
+      - DATABASE_URL=postgresql://portabase:${POSTGRES_PASSWORD}@db:5432/portabase?schema=public
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=portabase
+    volumes:
+      - portabase-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+        test: ["CMD-SHELL", "curl -f http://localhost/api/health"]
+        interval: 30s
+        timeout: 5s
+        retries: 3
+        start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.services.portabase.loadbalancer.server.port=80"
+      - "traefik.http.routers.portabase.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.portabase.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+  db:
+    <<: *default
+    container_name: portabase-pg
+    image: postgres:17-alpine
+    networks:
+      - "backend"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=portabase
+      - POSTGRES_USER=portabase
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portabase -d portabase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  portabase-data:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

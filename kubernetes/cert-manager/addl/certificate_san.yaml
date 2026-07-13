@@ -4,11 +4,11 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: san-cert-local
-  namespace: my-namespace
+  namespace: cert-manager
 spec:
   secretName: san-cert-local-secret
   issuerRef:
-    name: cf-staging # selfsigned, cf-staging, cf-production
+    name: selfsigned # selfsigned, cf-staging, cf-production
     kind: ClusterIssuer
   commonName: "local.127.0.0.1.sslip.io" # optional
   dnsNames:
@@ -17,7 +17,7 @@ spec:
   secretTemplate:
     annotations:
       reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
-      reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "dev,my-traefik"  # Control destination namespaces
+      reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "dev,traefik-system"  # Control destination namespaces
       reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true" # Auto create reflection for matching namespaces
 
 # kubectl get cert-manager

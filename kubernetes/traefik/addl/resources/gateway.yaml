@@ -1,0 +1,25 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: traefik-gateway
+  namespace: traefik-system
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: websecure
+      protocol: HTTPS
+      port: 443
+      hostname: "*.local.127.0.0.1.sslip.io"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: traefik-san-local-cert
+            kind: Secret
+      # HIER IST DIE MAGIE:
+      allowedRoutes:
+        namespaces:
+          # from: All
+          from: Selector
+          selector:
+            matchLabels:
+              allow-gateway: "true"

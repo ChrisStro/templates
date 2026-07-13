@@ -1,0 +1,24 @@
+name: portabase-agent
+
+services:
+  app:
+    container_name: portabase-agent
+    image: portabase/agent:latest
+    restart: always
+    volumes:
+      - ./databases.json:/config/config.json
+    extra_hosts:
+      - "localhost:host-gateway"
+    environment:
+      TZ: "UTC"
+      POLLING: 5
+      APP_ENV: production
+      LOG: info
+      EDGE_KEY: "${EDGE_KEY}"
+    networks:
+      - portabase
+
+networks:
+  portabase:
+    name: portabase_network
+    external: true

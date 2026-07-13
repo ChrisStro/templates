@@ -1,0 +1,21 @@
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+    allowExternalNameServices: true
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+
+api:
+  dashboard: true
+  insecure: true
+
+providers:
+  kubernetesGateway:
+    enabled: true
+  kubernetesIngress:
+    enabled: true # (Optional) Disable legacy Ingress provider
+gateway:
+  namespacePolicy: All

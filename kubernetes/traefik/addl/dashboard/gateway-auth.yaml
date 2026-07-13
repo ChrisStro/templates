@@ -1,0 +1,81 @@
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: traefik-dashboard-secret
+  namespace: traefik-system
+type: kubernetes.io/basic-auth
+stringData:
+  username: User
+  password: TopPassword
+
+---
+kind: Middleware
+apiVersion: traefik.io/v1alpha1
+metadata:
+  name: traefik-dashboard-auth
+  namespace: traefik-system
+spec:
+  basicAuth:
+    secret: traefik-dashboard-secret
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: traefik-dashboard
+  namespace: traefik-system
+spec:
+  selector:
+    app.kubernetes.io/name: traefik
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: traefik-gateway
+  namespace: traefik-system
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: websecure
+      protocol: HTTPS
+      port: 443
+      hostname: "*.local.127.0.0.1.sslip.io"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: traefik-san-local-cert
+            kind: Secret
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: traefik-dashboard-route
+  namespace: traefik-system
+spec:
+  parentRefs:
+    - name: traefik-gateway
+  hostnames:
+    - "t.local.127.0.0.1.sslip.io"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      # So bindet man in der Gateway API die Traefik-spezifischen Middlewares ein:
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: traefik-dashboard-auth
+      backendRefs:
+        - name: traefik-dashboard
+          port: 8080
+

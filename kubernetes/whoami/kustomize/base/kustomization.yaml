@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: whoami
+namespace: whoami-dev
+resources:
+- namespace.yaml
+- deploy.yaml
+- service.yaml
+images:
+  - name: traefik/whoami
+    newTag: latest
