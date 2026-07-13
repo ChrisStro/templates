@@ -1,0 +1,11 @@
+apiVersion: netbird.io/v1alpha1
+kind: NetworkRouter
+metadata:
+  name: kubernetes
+  namespace: netbird
+spec:
+  dnsZoneRef:
+    name: k8s.company.internal
+  workloadOverride:
+    replicas: 1
+

@@ -1,0 +1,60 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: default
+  labels: { app: nginx }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: nginx } }
+  template:
+    metadata: { labels: { app: nginx } }
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:stable
+          ports: [{ containerPort: 80 }]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: default
+spec:
+  type: ClusterIP
+  selector: { app: nginx }
+  ports:
+    - { name: http, port: 80, targetPort: 80, protocol: TCP }
+
+
+# Netbird Routers
+---
+apiVersion: netbird.io/v1alpha1
+kind: NetworkRouter
+metadata:
+  name: check-k8s
+  namespace: netbird
+spec:
+  dnsZoneRef:
+    name: k8s.company.internal
+  workloadOverride:
+    replicas: 1
+
+---
+apiVersion: netbird.io/v1alpha1
+kind: NetworkResource
+metadata:
+  name: nginx
+  namespace: default
+spec:
+  networkRouterRef:
+    name: check-k8s
+    namespace: netbird
+  serviceRef:
+    name: nginx
+  groups:
+    - name: K8s.Services
+
+

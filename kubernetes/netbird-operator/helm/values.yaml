@@ -1,0 +1,20 @@
+# Diese Zeile einfach selbst hinzufügen:
+#managementURL: "https://notrust.cc-hgn.de"
+
+operator:
+  replicaCount: 1
+
+cluster:
+  # Cluster DNS name (used for webhooks certificates and for network resource DNS names)
+  dns: svc.cluster.local
+  # Cluster name (used for generating network and network resource names in NetBird)
+  name: kubernetes
+
+netbirdAPI:
+  keyFromSecret:
+    name: "netbird-mgmt-api-key"
+    key: "NB_API_KEY"
+
+gatewayAPI:
+  enabled: false
+

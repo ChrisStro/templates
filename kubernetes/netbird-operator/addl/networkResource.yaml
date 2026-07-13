@@ -1,0 +1,14 @@
+---
+apiVersion: netbird.io/v1alpha1
+kind: NetworkResource
+metadata:
+  name: nginx
+spec:
+  networkRouterRef:
+    name: kubernetes
+    namespace: netbird
+  serviceRef:
+    name: nginx
+  groups:
+    - name: K8s.Services
+
