@@ -1,0 +1,22 @@
+---
+apiVersion: netbird.io/v1
+kind: NBRoutingPeer
+metadata:
+  name: netbird-proxy-priv
+  namespace: netbird
+spec:
+  replicas: 1
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: private
+  namespace: netbird
+spec:
+  gatewayClassName: netbird-private
+  listeners:
+  - protocol: gateway.netbird.io/NBRoutingPeer
+    name: netbird-proxy-priv
+    port: 1
+

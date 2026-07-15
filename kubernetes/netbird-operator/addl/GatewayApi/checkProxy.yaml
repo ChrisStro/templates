@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: default
+  labels: { app: nginx }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: nginx } }
+  template:
+    metadata: { labels: { app: nginx } }
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:stable
+          ports: [{ containerPort: 80 }]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: default
+spec:
+  type: ClusterIP
+  selector: { app: nginx }
+  ports:
+    - { name: http, port: 80, targetPort: 80, protocol: TCP }
+
+# Netbird Proxy via Gateway API
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: check-proxy
+  namespace: default
+  labels:
+    app: nginx
+spec:
+  hostnames:
+    # Optional: omit this field if you don't want to expose this through the reverse proxy
+    - i-check-my-proxy.eu1.netbird.services
+  parentRefs:
+  - name: public
+    namespace: netbird
+  rules:
+  - backendRefs:
+    - name: nginx
+      port: 80
+

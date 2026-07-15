@@ -16,5 +16,5 @@ netbirdAPI:
     key: "NB_API_KEY"
 
 gatewayAPI:
-  enabled: false
+  enabled: true
 

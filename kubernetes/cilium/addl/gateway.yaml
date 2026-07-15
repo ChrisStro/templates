@@ -1,0 +1,37 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: cilium-gateway
+  namespace: cilium
+spec:
+  gatewayClassName: cilium
+  listeners:
+    - name: web
+      protocol: HTTP
+      port: 80
+      hostname: "*.local.127.0.0.1.sslip.io"
+      allowedRoutes:
+        namespaces:
+          # from: All
+          from: Selector
+          selector:
+            matchLabels:
+              allow-gateway: "true"
+    - name: websecure
+      protocol: HTTPS
+      port: 443
+      hostname: "*.local.127.0.0.1.sslip.io"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: san-cert-local-secret
+            namespace: cert-manager
+            kind: Secret
+      # HIER IST DIE MAGIE:
+      allowedRoutes:
+        namespaces:
+          # from: All
+          from: Selector
+          selector:
+            matchLabels:
+              allow-gateway: "true"

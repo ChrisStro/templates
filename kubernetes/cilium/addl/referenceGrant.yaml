@@ -1,0 +1,14 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: cilium-cert-grant
+  namespace: cert-manager  # <--- HIER liegt das Zertifikat
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: cilium  # <--- WER darf es lesen?
+  to:
+    - group: ""
+      kind: Secret
+      name: san-cert-local-secret  # <--- WAS darf gelesen werden?

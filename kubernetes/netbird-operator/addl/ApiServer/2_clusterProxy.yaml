@@ -1,0 +1,8 @@
+apiVersion: netbird.io/v1alpha1
+kind: ClusterProxy
+metadata:
+  name: prod
+  namespace: netbird
+spec:
+  clusterName: prod
+  serviceAccountName: clusterproxy-prod

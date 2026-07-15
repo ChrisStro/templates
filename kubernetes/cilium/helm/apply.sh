@@ -1,7 +1,7 @@
 #!/bin/bash
 CHART_NAME="cilium"
 REPO_NAME="cilium"
-NAMESPACE="cilium-system"
+NAMESPACE="cilium"
 
 # scriptvars
 SCRIPT_PATH=${BASH_SOURCE[0]}
