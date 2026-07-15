@@ -7,7 +7,7 @@ spec:
   from:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      namespace: cilium  # <--- WER darf es lesen?
+      namespace: cilium-system  # <--- WER darf es lesen?
   to:
     - group: ""
       kind: Secret

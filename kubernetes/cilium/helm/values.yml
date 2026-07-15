@@ -32,3 +32,17 @@ cgroup:
 
 l2announcements:
   enabled: true
+
+ingressController:
+  enabled: false
+  loadbalancerMode: shared
+
+gatewayAPI:
+  enabled: true
+
+# Enable Hubble UI
+hubble:
+  relay:
+    enabled: true
+  ui:
+    enabled: true

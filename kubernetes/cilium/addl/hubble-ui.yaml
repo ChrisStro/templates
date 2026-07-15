@@ -3,11 +3,11 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: hubble-ui
-  namespace: cilium
+  namespace: cilium-system
 spec:
   parentRefs:
     - name: cilium-gateway
-      namespace: cilium
+      namespace: cilium-system
   hostnames:
     - "hubble-ui.local.10.122.57.50.sslip.io"
   rules:

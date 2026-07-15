@@ -1,0 +1,58 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "allow-gateway-to-whoami"
+  namespace: whoami-dev
+spec:
+  # 1. WEN betrifft diese Regel? (Endpoint Selector)
+  endpointSelector:
+    matchLabels:
+      app: whoami # Wir gehen davon aus, dass dein Pod dieses Label hat
+  
+  # 2. WAS darf rein? (Ingress)
+  ingress:
+    - fromEntities:
+        # Wir erlauben NUR Traffic, der vom Cilium-Gateway kommt
+        - ingress
+      toPorts:
+        - ports:
+            - port: "8080" # Auf diesen internen Pod-Port darf zugegriffen werden WICHTIG:POD PORT
+              protocol: TCP
+  # 2. AUSGEHEND: Default Deny ist jetzt aktiv! 
+  # Wir erlauben als einzige Ausnahme das K8s-interne DNS.
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            # Wir zielen auf den CoreDNS Pod im kube-system Namespace ab
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY # DNS nutzt UDP und manchmal TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "allow-frontend-to-backend"
+  namespace: my-app
+spec:
+  # 1. ZIEL: Um welchen Pod bauen wir die eBPF-Firewall?
+  endpointSelector:
+    matchLabels:
+      app: backend
+  
+  # 2. REGEL: Wer darf hinein? (Ingress)
+  ingress:
+    - fromEndpoints:
+        # Erlaube NUR Traffic von Pods, die dieses Label tragen
+        - matchLabels:
+            app: frontend
+      
+      # 3. PORT: Auf welchem internen Port?
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+
