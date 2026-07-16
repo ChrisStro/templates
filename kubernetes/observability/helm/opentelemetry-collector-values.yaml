@@ -1,0 +1,23 @@
+mode: daemonset
+
+image:
+  repository: "otel/opentelemetry-collector-contrib"
+
+presets:
+  logsCollection:
+    enabled: true
+    includeCollectorLogs: false
+
+config:
+  exporters:
+    # HIER definieren wir den Ausgangs-Namen: "otlphttp"
+    otlphttp:
+      endpoint: "http://loki.observability.svc.cluster.local:3100/otlp"
+      
+  service:
+    pipelines:
+      logs:
+        receivers: [filelog]
+        processors: [batch]
+        # HIER müssen wir denselben Namen rufen!
+        exporters: [otlphttp]

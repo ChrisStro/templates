@@ -1,0 +1,34 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-ui
+  namespace: observability
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: cilium-system
+  hostnames:
+    - "grafana.local.127.0.0.1.sslip.io"
+  rules:
+    - backendRefs:
+        - name: grafana
+          port: 80
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prometheus-ui
+  namespace: observability
+spec:
+  parentRefs:
+    - name: cilium-gateway
+      namespace: cilium-system
+  hostnames:
+    - "prometheus.local.127.0.0.1.sslip.io"
+  rules:
+    - backendRefs:
+        - name: prometheus-server
+          port: 80
+

@@ -1,0 +1,17 @@
+adminPassword: "admin" # Setze hier dein Wunschpasswort!
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    # Datenquelle 1: Loki (Für Logs)
+    - name: Loki
+      type: loki
+      url: http://loki.observability.svc.cluster.local:3100
+      access: proxy
+      isDefault: true
+    # Datenquelle 2: Prometheus (Für Metriken)
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus-server.observability.svc.cluster.local:80
+      access: proxy

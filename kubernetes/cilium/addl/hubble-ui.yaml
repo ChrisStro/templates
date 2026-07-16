@@ -9,7 +9,7 @@ spec:
     - name: cilium-gateway
       namespace: cilium-system
   hostnames:
-    - "hubble-ui.local.10.122.57.50.sslip.io"
+    - "hubble-ui.local.127.0.0.1.sslip.io"
   rules:
     - backendRefs:
         - name: hubble-ui

@@ -1,0 +1,13 @@
+# Wir deaktivieren Komponenten, die wir für ein schlankes Setup nicht brauchen
+alertmanager:
+  enabled: false
+pushgateway:
+  enabled: false
+
+# WICHTIG FÜR TALOS: Node-Exporter deaktivieren!
+nodeExporter:
+  enabled: false
+
+# Kube-State-Metrics bleibt an (das liest K8s-Objekte wie Pods/Deployments aus)
+kubeStateMetrics:
+  enabled: true
