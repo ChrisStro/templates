@@ -1,0 +1,28 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  zac:
+    <<: *default
+    image: openziti/zac
+    container_name: zac
+    networks:
+      - proxy_network
+    environment:
+      - TZ=Europe/Berlin
+      - ZAC_CONTROLLER_URLS=$ZAC_CONTROLLER_URLS
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zac.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.services.zac.loadbalancer.server.port=1408"
+      - "traefik.http.routers.zac.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
