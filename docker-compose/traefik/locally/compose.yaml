@@ -29,8 +29,6 @@ services:
       - "--entrypoints.websecure.http.tls=true"
       # SSL Ciphers
       - "--entrypoints.websecure.http.tls.options=default"
-      # middlewares
-      - "--entrypoints.websecure.http.middlewares=hsts-header@file"
       # Enable dashboard
       - "--api=true"
       - "--api.dashboard=$DASHBOARDENABLED"
@@ -49,7 +47,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure-internal}"
+      - "traefik.http.routers.traefik.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure}"
       - "traefik.http.routers.traefik.rule=Host(`t.$DOMAINNAME`)"
 
 configs:

@@ -1,0 +1,68 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  backend:
+    <<: *default
+    container_name: infisical-backend
+    image: infisical/infisical:${INFISICAL_IMAGE_TAG:-latest}
+    pull_policy: always
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file: .env
+    networks:
+      - backend_network
+      - proxy_network
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.proxy.network=$PROXY_NETWORK'
+      - 'traefik.http.routers.infisical.rule=Host(`$PUBLIC_HOSTNAME`)'
+      - 'traefik.http.services.infisical.loadbalancer.server.port=8080'
+      - 'traefik.http.routers.infisical.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}'
+
+  redis:
+    <<: *default
+    image: redis:${REDIS_IMAGE_TAG:-7-alpine}
+    container_name: infisical-redis
+    env_file: .env
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - backend_network
+    volumes:
+      - redis_data:/data
+
+  db:
+    <<: *default
+    container_name: infisical-db
+    image: postgres:${POSTGRES_IMAGE_TAG:-14-alpine}
+    env_file: .env
+    networks:
+      - backend_network
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+volumes:
+  pg_data:
+  redis_data:
+
+networks:
+  backend_network:
+    name: infisical_backend
+    driver: bridge
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
