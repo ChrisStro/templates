@@ -5,8 +5,8 @@ metadata:
   name: whoami
 spec:
   parentRefs:
-    - name: traefik-gateway
-      namespace: traefik-system
+    - name: cilium-gateway
+      namespace: cilium
   hostnames:
     - "whoami.local.127.0.0.1.sslip.io"
   rules:

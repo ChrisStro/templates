@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <file_share_secret_name>
+type: kubernetes.io/basic-auth
+stringData:
+  username: <file_share_username>
+  password: <file_share_password>
