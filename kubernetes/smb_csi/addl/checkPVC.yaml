@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: check-pvc
+  namespace: smb-csi
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: smb
+  resources:
+    requests:
+      storage: 5Gi
