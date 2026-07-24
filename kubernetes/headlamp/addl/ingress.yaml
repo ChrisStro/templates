@@ -1,0 +1,18 @@
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: headlamp
+  namespace: headlamp
+spec:
+  rules:
+  - host: headlamp.local.127.0.0.1.sslip.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: headlamp
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
