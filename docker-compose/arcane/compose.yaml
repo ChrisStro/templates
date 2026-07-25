@@ -1,0 +1,42 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  arcane:
+    image: ghcr.io/getarcaneapp/manager:latest
+    container_name: arcane
+    <<: *default
+    networks:
+      - proxy_network
+    env_file:
+      - .env
+    environment:
+      - APP_URL=https://$PUBLIC_HOSTNAME
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - data:/app/data
+      - ${STACK_PATH:-stacks}:/app/data/projects
+      - ${BACKUP_PATH:-backups}:/backups
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.arcane.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.arcane.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.arcane.loadbalancer.server.port=3552"
+
+volumes:
+  data:
+  stacks:
+  backups:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true   

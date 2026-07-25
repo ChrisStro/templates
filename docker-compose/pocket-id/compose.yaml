@@ -9,7 +9,7 @@ x-default: &default
 services:
   pocket-id:
     <<: *default
-    image: ghcr.io/pocket-id/pocket-id:${IMAGE_TAG:-v2}
+    image: ghcr.io/pocket-id/pocket-id:${IMAGE_TAG:-latest}
     restart: unless-stopped    
     networks:
       - proxy_network
