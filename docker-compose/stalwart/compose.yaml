@@ -1,0 +1,43 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+services:
+  stalwart:
+    <<: *default
+    image: 'stalwartlabs/stalwart:v0.16'
+    restart: unless-stopped
+    container_name: stalwart
+    networks:
+      - proxy_network
+    ports:
+      - '4190:4190'
+      - '995:995'
+      - '110:110'
+      - '993:993'
+      - '143:143'
+      - '465:465'
+      - '587:587'
+      - '25:25'
+      - '443:443'
+    volumes:
+      - 'data:/var/lib/stalwart'
+      - 'config:/etc/stalwart'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.stalwart.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.stalwart.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"      
+      - "traefik.http.services.stalwart.loadbalancer.server.port=8080"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
+
+volumes:
+  data:
+  config:

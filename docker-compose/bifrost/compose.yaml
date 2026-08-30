@@ -1,0 +1,51 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  bifrost:
+    <<: *default
+    image: maximhq/bifrost:latest
+    container_name: bifrost
+    networks:
+      - proxy_network
+    environment:
+      - BIFROST_SETUP_TOKEN=${BIFROST_SETUP_TOKEN}
+    configs:
+      - source: config_json
+        target: /app/data/config.json
+    volumes:
+      - bifrost_data:/app/data
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080 || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.bifrost.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.bifrost.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.bifrost.loadbalancer.server.port=8080"
+
+configs:
+  config_json:
+    content: |
+      {
+        "client": {
+          "allowed_origins": ["https://$PUBLIC_HOSTNAME"]
+        }
+      }
+
+volumes:
+  bifrost_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

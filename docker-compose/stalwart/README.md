@@ -1,0 +1,5 @@
+# Stalwart
+
+Stalwart is an open-source mail & collaboration server with JMAP, IMAP4, POP3, SMTP, CalDAV, CardDAV and WebDAV support and a wide range of modern features. It is written in Rust and designed to be secure, fast, robust and scalable
+
+[GitHub Page](https://github.com/stalwartlabs/stalwart)
