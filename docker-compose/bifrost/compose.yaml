@@ -15,9 +15,6 @@ services:
       - proxy_network
     environment:
       - BIFROST_SETUP_TOKEN=${BIFROST_SETUP_TOKEN}
-    configs:
-      - source: config_json
-        target: /app/data/config.json
     volumes:
       - bifrost_data:/app/data
     healthcheck:
@@ -32,15 +29,6 @@ services:
       - "traefik.http.routers.bifrost.rule=Host(`$PUBLIC_HOSTNAME`)"
       - "traefik.http.routers.bifrost.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.bifrost.loadbalancer.server.port=8080"
-
-configs:
-  config_json:
-    content: |
-      {
-        "client": {
-          "allowed_origins": ["https://$PUBLIC_HOSTNAME"]
-        }
-      }
 
 volumes:
   bifrost_data:

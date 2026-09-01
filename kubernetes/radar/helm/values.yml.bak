@@ -1,0 +1,593 @@
+# Default values for radar.
+
+# Radar is designed to run as a single replica. Each pod holds its own
+# in-memory K8s informer cache, SSE streams, exec/port-forward sessions, and
+# (in memory mode) timeline buffer — none of which are shared across pods.
+# Setting replicaCount > 1 produces a confusing UX even when it doesn't fail
+# outright. The chart hard-fails replicaCount > 1 when persistence+sqlite are
+# enabled (single PVC + SQLite cannot be safely shared across pods).
+replicaCount: 1
+
+image:
+  repository: ghcr.io/skyhook-io/radar
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Debug feature (terminal "Debug" tab): the image used for ephemeral debug
+# containers attached to pods and for privileged node debug pods. Point this at
+# a reachable mirror in air-gapped / private-registry clusters where the default
+# busybox:latest cannot be pulled. If built-in restricted PodSecurity rejects
+# the default pod debug container, Radar retries with a restricted-compatible
+# Linux security context using the target/pod non-root UID, or UID 65532 by
+# default. Custom images used there must work as a non-root user.
+# Empty = busybox:latest.
+# Note: Radar does not attach imagePullSecrets to debug containers/pods —
+# ephemeral containers inherit the target pod's, and node debug pods rely on the
+# default namespace's ServiceAccount / node registry config — so the image must
+# be pullable without extra credentials from Radar.
+debug:
+  image: ""
+
+# Initial-sync tuning for very large clusters. When > 0, the initial LIST of
+# high-cardinality kinds (Pods, ReplicaSets) is fetched in pages of this size
+# instead of one response — avoids response-read timeouts / memory spikes during
+# startup on clusters with tens of thousands of objects. Only takes effect when
+# the apiserver lacks WatchList streaming (otherwise the initial state streams).
+# 0 = off (single LIST). Try 2000 if a large cluster fails to sync.
+listPageSize: 0
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# RBAC configuration
+rbac:
+  # Create ClusterRole and ClusterRoleBinding
+  create: true
+  # Additional rules to add to the ClusterRole
+  additionalRules: []
+
+  # Privileged permissions (disabled by default for security)
+  # Enable these based on features you need:
+
+  # Allow Helm write operations (install, upgrade, rollback, uninstall, apply values)
+  # Requires broad permissions - grants create/update/patch/delete on all resource types,
+  # since Helm charts can create any kind of Kubernetes resource.
+  # Automatically enables secrets read access (needed for Helm release storage).
+  helm: false
+
+  # Allow reading secrets (shows secrets in resource list)
+  secrets: false
+
+  # Allow reading RBAC objects (Roles, RoleBindings, ClusterRoles, ClusterRoleBindings)
+  # so the resource browser can list them and the per-ServiceAccount "blast radius"
+  # Permissions panel can render. Auto-enabled when auth is on (auth.mode != none)
+  # or in cloud mode, where every RBAC read is re-checked against the requesting
+  # user's own permissions so the shared cache can't leak the authorization graph.
+  # This flag therefore only matters for no-auth installs: there, cache-served reads
+  # aren't gated per-user, so anyone reaching Radar's API would see the full RBAC
+  # graph — reconnaissance value for a low-trust user. Enable only if that audience
+  # is trusted with cluster RBAC visibility.
+  viewRBAC: false
+
+  # Allow reading admission webhook configurations (MutatingWebhookConfiguration,
+  # ValidatingWebhookConfiguration) so the resource browser can list them.
+  # Auto-enabled when auth is on (auth.mode != none) or in cloud mode, where
+  # every read is re-checked against the requesting user's own permissions.
+  # For no-auth installs this stays opt-in: the configurations reveal which
+  # admission controls are enforced (Gatekeeper / Kyverno policies, image
+  # scanners, DLP, etc.) and where the gaps are — reconnaissance value for a
+  # low-trust viewer. Enable only if that audience is trusted with admission
+  # plane visibility.
+  viewWebhooks: false
+
+  # Allow the no-auth in-cluster Radar identity to read kubelet metrics and
+  # effective configuration through nodes/proxy for upgrade-impact checks.
+  # This exposes node-level runtime and configuration details to anyone who
+  # can reach that Radar instance. Enable only when that audience is trusted.
+  # Authenticated users need this permission on their own Kubernetes identity.
+  viewNodeRuntime: false
+
+  # Allow pod exec (enables terminal feature)
+  podExec: false
+
+  # Allow pod logs (enables log viewer)
+  # This is relatively safe - only reads logs, no write access
+  podLogs: true
+
+  # Allow port forwarding (enables port forward feature).
+  # Also the fallback path for traffic sources (Hubble/Caretta): Radar dials
+  # the metrics/relay Service directly first, so in-cluster installs normally
+  # don't need this — only enable it if network policy or routing blocks
+  # Radar's namespace from reaching the service directly.
+  portForward: false
+
+  # Allow Radar Cloud to trigger one-click in-app upgrades without customers
+  # needing a terminal or cloud credentials. Not needed for standalone/local
+  # installs — those have direct kubectl/Helm access anyway.
+  # Security scope: namespace-scoped Role (not ClusterRole), restricted to this
+  # Deployment only via resourceNames, get+patch verbs only (no delete/create).
+  # The endpoint requires an explicitly attributed Radar Cloud organization
+  # owner, validates the requested Radar tag, and preserves the repository
+  # already configured on the live container (including private mirrors).
+  selfUpgrade: false
+
+  # Traffic visibility (Hubble/Cilium integration)
+  # Grants read access ONLY to hubble-relay-client-certs secret for TLS auth
+  traffic: true
+
+  # Metrics (pods/nodes) from metrics-server (metrics.k8s.io API).
+  # Enables CPU/memory utilization widgets on the dashboard and per-resource
+  # metrics panels. Safe to enable — read-only on the aggregated metrics API.
+  metrics: true
+
+  # CRD access - all common groups enabled by default
+  # Granting RBAC for CRDs that don't exist has no effect.
+  crdGroups:
+    # Set to true to grant read access to ALL CRDs (overrides individual settings below)
+    # Simpler but broader permissions - some orgs may not allow this
+    all: false
+
+    apiRegistration: true   # apiregistration.k8s.io (APIService health for aggregated APIs)
+    argo: true              # argoproj.io
+    awx: true               # awx.ansible.com
+    calico: true            # projectcalico.org, crd.projectcalico.org (Calico policies, IPPools, HostEndpoints, Tiers)
+    certManager: true       # cert-manager.io, acme.cert-manager.io
+    cilium: true            # cilium.io (CiliumClusterwideNetworkPolicy etc. in topology)
+    cloudnativePg: true     # postgresql.cnpg.io, barmancloud.cnpg.io (CloudNativePG: Clusters, Poolers, Backups, ObjectStores)
+    clusterApi: true        # *.cluster.x-k8s.io (CAPI core + infrastructure / controlplane / bootstrap / addons)
+    contour: true           # projectcontour.io
+    crossplane: true        # crossplane.io, pkg.crossplane.io, apiextensions.crossplane.io, helm.crossplane.io, kubernetes.crossplane.io. For Upbound provider CRDs (s3.aws.upbound.io, compute.gcp.upbound.io, etc.) list them in additionalCrdGroups — K8s RBAC has no apiGroup wildcards.
+    amdGpu: true            # amd.com (AMD GPU Operator: DeviceConfig)
+    descheduler: true       # descheduler.alpha.kubernetes.io
+    dra: true               # resource.k8s.io (Dynamic Resource Allocation — ResourceClaims, DeviceClasses, ResourceSlices)
+    envoyGateway: true      # gateway.envoyproxy.io
+    inferenceGateway: true  # inference.networking.k8s.io, inference.networking.x-k8s.io, llm-d.ai (Inference Gateway + llm-d routing APIs)
+    externalDns: true       # externaldns.k8s.io
+    externalSecrets: true   # external-secrets.io
+    flux: true              # *.toolkit.fluxcd.io
+    gatewayApi: true        # gateway.networking.k8s.io
+    gcpMonitoring: true     # monitoring.googleapis.com
+    grafana: true           # monitoring.grafana.com, tempo/loki/grafana.integreatly.org
+    istio: true             # networking.istio.io, security.istio.io
+    jobset: true            # jobset.x-k8s.io
+    kaiScheduler: true      # scheduling.run.ai, kai.scheduler (KAI Scheduler queues and pod groups)
+    kaito: true             # kaito.sh (Workspaces, RAGEngines)
+    karpenter: true         # karpenter.sh, karpenter.k8s.aws, karpenter.azure.com, karpenter.k8s.gcp, eks.amazonaws.com (EKS Auto Mode NodeClasses)
+    keda: true              # keda.sh
+    knative: true           # serving.knative.dev, eventing.knative.dev, sources/messaging/flows/networking.internal.knative.dev
+    kserve: true            # serving.kserve.io (InferenceServices, ServingRuntimes, LLMInferenceServices)
+    kubeflow: true          # kubeflow.org, trainer.kubeflow.org (PyTorchJob/TFJob/MPIJob, TrainJob)
+    kuberay: true           # ray.io (RayClusters, RayJobs, RayServices)
+    kubeshark: true         # kubeshark.io
+    kubevirt: true          # kubevirt.io (VirtualMachines/VMIs) + cdi/clone/export/instancetype/migrations/pool/snapshot.kubevirt.io
+    kueue: true             # kueue.x-k8s.io + autoscaling.x-k8s.io (queues, workloads, ProvisioningRequests)
+    kured: true             # kured.io
+    kyverno: true           # kyverno.io, policies.kyverno.io (modern CEL policy family), wgpolicyk8s.io, reports.kyverno.io, openreports.io
+    lws: true               # leaderworkerset.x-k8s.io
+    mariadb: true           # mariadb.mmontes.io
+    networkPolicyApi: true  # policy.networking.k8s.io (Admin/Baseline/ClusterNetworkPolicy — SIG-network)
+    nginx: true             # nginx.org
+    nimOperator: true       # apps.nvidia.com (NVIDIA NIM: NIMServices, NIMCaches, NIMPipelines)
+    nvidia: true            # nvidia.com (GPU Operator: ClusterPolicy, NVIDIADriver)
+    openshift: true         # observability.openshift.io
+    opentelemetry: true     # opentelemetry.io
+    prometheus: true        # monitoring.coreos.com
+    reflector: true         # reflector.v1.k8s.emberstack.com
+    reloader: true          # reloader.stakater.com
+    sealedSecrets: true     # bitnami.com
+    strimzi: true           # strimzi.io, kafka.strimzi.io
+    tekton: true            # tekton.dev
+    traefik: true           # traefik.io, traefik.containo.us
+    trivy: true             # aquasecurity.github.io
+    velero: true            # velero.io
+    verticalPodAutoscaler: true  # autoscaling.k8s.io (VPA — granted by default; no-op on clusters where VPA isn't installed)
+    volcano: true           # batch.volcano.sh, scheduling.volcano.sh, flow.volcano.sh, bus.volcano.sh
+
+  # Additional CRD API groups for custom/unlisted CRDs
+  # Example: ["mycompany.io", "custom.example.com"]
+  additionalCrdGroups: []
+
+podAnnotations: {}
+
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  annotations: {}
+  type: ClusterIP
+  port: 9280
+
+# URL path prefix that Radar itself serves under, e.g. /radar. Set this when
+# your ingress forwards a subpath through to the service without stripping it.
+# Leave empty for root serving or for ingresses that rewrite /radar -> /.
+# Cannot be combined with cloud.enabled — Radar Cloud owns the URL path.
+basePath: ""
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: radar.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: radar-tls
+  #    hosts:
+  #      - radar.example.com
+
+httpRoute:
+  enabled: false
+  apiVersion: gateway.networking.k8s.io/v1
+  annotations: {}
+  labels: {}
+  parentRefs: []
+  hostnames: []
+  # Optional request timeout for chart-generated default rule. Empty means
+  # Gateway deployment default applies. Set 0s to explicitly disable timeout.
+  defaultTimeout: ""
+  # When empty, chart emits a default / Prefix rule to Radar Service.
+  # Non-empty rules replace default and pass through unchanged.
+  rules: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Timeline storage configuration
+#
+# When to pick which:
+#   memory (default) — events live in-process and are lost on pod restart.
+#     Pick this if you only need recent activity (last few hours), don't
+#     care about losing history when a pod cycles, or want the simplest
+#     setup. Lower memory footprint than sqlite for the same retention
+#     window because there's no overhead for indexes / WAL.
+#   sqlite — events persist across restarts to a PVC. Pick this if you want
+#     a multi-day audit trail (who did what, when), need to inspect changes
+#     that happened while you weren't looking, or run Radar in-cluster as a
+#     long-lived deployment. Adds operational concerns: the PVC fills if
+#     retention is unbounded; restart on a multi-GB DB is slower.
+#
+# Timeline volume depends on cluster size and controller churn. Keep `maxSize`
+# below the PVC `size` so Radar can prune before the volume fills; tune
+# `retention`, `maxSize`, and PVC `size` together.
+timeline:
+  # Storage backend: "memory" or "sqlite"
+  storage: memory
+  # Path to SQLite database (only used when storage is "sqlite")
+  # Note: Requires a PVC when using sqlite
+  dbPath: /data/timeline.db
+  # Maximum number of events to retain (memory store only — currently
+  # ignored by sqlite; use `retention` instead).
+  historyLimit: 10000
+  # SQLite retention: how long to keep events. Go duration (e.g. 168h, 720h).
+  # "0" disables cleanup (events table grows unbounded — not recommended for
+  # in-cluster deployments). Cleanup runs hourly + once at startup.
+  retention: 168h
+  # SQLite max storage size. When the DB + WAL exceed this value, Radar prunes
+  # oldest events until storage is back under the low-water mark. Set "0" to
+  # disable size-based pruning.
+  maxSize: 800Mi
+
+# Authentication and RBAC configuration
+auth:
+  # Authentication mode: "none" (default), "proxy", or "oidc"
+  mode: none
+  # HMAC secret for session cookies (auto-generated if empty)
+  secret: ""
+  # Use an existing secret for the auth HMAC key
+  existingSecret: ""
+  existingSecretKey: "auth-secret"
+  # Session cookie TTL (sliding — extends on activity, idle sessions expire after this duration)
+  cookieTTL: "4h"
+  # Proxy mode settings
+  proxy:
+    userHeader: "X-Forwarded-User"
+    groupsHeader: "X-Forwarded-Groups"
+    # URL the logout button redirects to, to tear down the upstream proxy
+    # session (e.g. oauth2-proxy's "/oauth2/sign_out"). The proxy must actually
+    # invalidate the session at this URL — Radar only clears its own cookie
+    # (Basic Auth has no logout). Empty = clear Radar's cookie only.
+    logoutURL: ""
+  # OIDC mode settings
+  oidc:
+    issuerURL: ""
+    # Optional internal issuer base URL used by the Radar pod for discovery and
+    # derived server-side token/userinfo/JWKS endpoints. Tokens are still
+    # validated against issuerURL, and browser redirects stay browser-facing.
+    internalIssuerURL: ""
+    # Optional endpoint overrides. Use these when browser-facing and server-side
+    # OIDC URLs cannot be derived from issuerURL/internalIssuerURL.
+    authorizationURL: ""
+    tokenURL: ""
+    userInfoURL: ""
+    jwksURL: ""
+    clientID: ""
+    clientSecret: ""
+    # Use an existing K8s Secret for the OIDC client secret (avoids storing in Helm values).
+    # The Secret must contain a key matching clientSecretKey below.
+    existingSecret: ""
+    # Key within the existingSecret that holds the client secret value
+    clientSecretKey: "client-secret"
+    redirectURL: ""
+    groupsClaim: "groups"
+    # OAuth2 scopes requested at authorization. Defaults to
+    # ["openid", "profile", "email", "groups"] inside the binary when empty.
+    # Override if your IdP rejects "groups" (e.g., Google — drop it) or you
+    # need extras like "offline_access".
+    scopes: []
+    # URL to redirect after OIDC provider logout (must be registered with IdP)
+    postLogoutRedirectURL: ""
+    # Prefix for OIDC username/groups to match kube-apiserver --oidc-username-prefix / --oidc-groups-prefix
+    usernamePrefix: ""
+    groupsPrefix: ""
+    # Path to CA certificate file for OIDC provider TLS (e.g., /etc/radar/oidc-ca.crt)
+    caCert: ""
+    # Skip TLS verification for OIDC provider (insecure, dev/test only)
+    insecureSkipVerify: false
+    # Enable OIDC Back-Channel Logout endpoint. When enabled, the IdP can POST
+    # a signed logout_token to /auth/backchannel-logout to revoke sessions.
+    # Single-replica only — revocations are stored in memory and lost on pod restart.
+    backchannelLogout: false
+    # Enable PKCE (S256) for the OIDC authorization-code flow (opt-in). Default off —
+    # existing deployments are unaffected. Enable only if your IdP supports PKCE and
+    # you want the extra protection against authorization-code interception.
+    enablePKCE: false
+
+# Radar Cloud (hosted SaaS at radarhq.io) — outbound-only tunnel. When
+# enabled, this Radar instance dials out to the Cloud service over
+# WebSocket and serves its existing API through yamux streams. No inbound
+# ports required beyond the Pod's. Leave disabled for standalone OSS
+# deployments.
+cloud:
+  enabled: false
+  # Cloud WebSocket URL. Must start with ws:// or wss://. Example:
+  # wss://api.radarhq.io/agent
+  url: ""
+  # Human-readable cluster identifier from the Cloud install wizard.
+  clusterName: ""
+  # Cluster bearer token (rhc_<random>) issued by the Cloud service. Inline
+  # for convenience in dev; production should use existingSecret instead.
+  token: ""
+  # Source the token from an existing Secret instead of inlining it above.
+  # The Secret must contain a key matching existingSecretKey.
+  existingSecret: ""
+  existingSecretKey: "token"
+  # Skip TLS verification on the tunnel to the hub — for trials against a
+  # self-hosted hub that serves a self-signed certificate. The tunnel stays
+  # encrypted but is NOT authenticated (a network attacker could impersonate
+  # the hub), so leave false for any hub with a publicly trusted certificate.
+  insecureSkipVerify: false
+  # Default ClusterRoleBindings for Radar Cloud identity groups.
+  #
+  # How it works: Cloud injects X-Forwarded-Groups: radar:<role>,
+  # radar:org:<id>, radar:user:<id> on every proxied request. Radar
+  # impersonates that identity against the K8s API on EVERY user-initiated
+  # call (REST, MCP, Helm reads and writes, workload logs, node ops, pod
+  # file browse, CAPI kubeconfig), so K8s RBAC enforces the tier — no
+  # Radar-side "permission" checks.
+  #
+  # Defaults map Cloud's tiers onto standard K8s ClusterRoles. These are
+  # ClusterRoleBindings (not namespace-scoped RoleBindings), so the grant
+  # applies in EVERY namespace:
+  #   radar:owner   → "admin"  (full read+write in every namespace, including
+  #                            RBAC within namespaces; no writes on cluster-
+  #                            scoped resources like Nodes, CRDs, ClusterRoles)
+  #   radar:member  → "edit"   (read+write on standard resources, no RBAC)
+  #   radar:viewer  → "view"   (read-only)
+  #
+  # These are starting-point grants, not "fallbacks that kick in when the
+  # user has nothing else" — K8s RBAC is strictly ADDITIVE. Operator bindings
+  # stack on top of ours, they can't override or deny. To tighten a tier,
+  # set its boolean below to false (suppresses our binding) and author your
+  # own. To give an individual user extra access, bind radar:user:<id> to
+  # an extra Role/ClusterRole — it will union with their tier's permissions.
+  # To loosen owner, set ownerClusterRole=cluster-admin.
+  defaultRbac:
+    create: true
+    owner: true
+    member: true
+    viewer: true
+    # ClusterRoles the three Cloud roles bind to. Swap for custom ClusterRoles
+    # to tighten or loosen the defaults. NOTE: this controls the namespaced
+    # binding only — the cluster-scoped read add-on below is a SEPARATE,
+    # independent binding. Tightening a tier here does not remove its
+    # clusterScopedRead grant; set that tier's flag below too.
+    ownerClusterRole: admin
+    memberClusterRole: edit
+    viewerClusterRole: view
+    # Grant cluster-wide infrastructure read (Nodes, PVs, StorageClasses,
+    # IngressClasses, PriorityClasses, RuntimeClasses, CRDs, and admission
+    # webhooks) plus list-only Upgrade impact source evidence
+    # (CSIStorageCapacities, legacy PodSecurityPolicies, and API flow-control
+    # config) on top of the built-in view/edit/admin roles, which don't cover
+    # all of them.
+    # When their matching collection is enabled, the add-on also grants read on
+    # APIServices, PrometheusRules, Karpenter kinds, and node metrics. Per tier,
+    # each default true — Radar is a cluster-wide observability tool, so by
+    # default every tier (incl. viewer) sees core infrastructure. No Secrets or
+    # RBAC objects.
+    #
+    # Set a tier false to remove this add-on's binding. With the default
+    # built-in role mappings above that leaves the tier namespaced-only —
+    # common for security-conscious orgs (clusterScopedRead.viewer=false →
+    # viewers get stock `view` and cannot enumerate cluster infra). With a
+    # custom *ClusterRole the tier's cluster-scoped reach is whatever that
+    # role grants; this flag only controls our add-on binding.
+    #
+    # Independent of *ClusterRole above: a custom namespaced role does NOT
+    # disable cluster-read (they're separate bindings). Want a tier to read a
+    # DIFFERENT cluster-scoped set (e.g. Nodes but not PVs)? Set its flag false
+    # and bind your own ClusterRole to the radar:<tier> group — the radar:*
+    # groups exist regardless of this chart, so your binding composes cleanly.
+    clusterScopedRead:
+      viewer: true
+      member: true
+      owner: true
+    # Grant the owner tier node cordon/drain. Cluster-scoped WRITE, so OFF by
+    # default. Blast radius when enabled: `patch nodes` can't be field-scoped
+    # by RBAC (also permits label/taint edits cluster-wide), and
+    # `create pods/eviction` can't be name-scoped (permits evicting any pod in
+    # any namespace; PDBs bound the impact only where they exist). The role
+    # adds no RBAC-object or Secret access. Composes with the tier toggles:
+    # while owner=false this renders nothing, but it stays latent — re-enabling
+    # owner later activates it. See templates/cloud-rbac-node-ops.yaml.
+    nodeOps: false
+
+# MCP (Model Context Protocol) server for AI tools
+mcp:
+  # Set to false to disable the MCP server (useful when deployed behind authentication)
+  enabled: true
+
+# OpenCost/Kubecost display configuration
+cost:
+  # Optional ISO 4217 override for OpenCost/Kubecost values. Empty detects the
+  # running cost tool's configured currency when available, then uses USD.
+  currency: ""
+
+# Traffic source configuration
+traffic:
+  # Manual Prometheus/VictoriaMetrics URL (bypasses auto-discovery)
+  # Use this when auto-discovery doesn't find your metrics service.
+  # Examples:
+  #   http://prometheus-server.monitoring:80
+  #   http://vmsingle.victoria-metrics:8428
+  #   http://vmselect.victoria-metrics:8481/select/0/prometheus
+  prometheusUrl: ""
+  # HTTP headers sent with every Prometheus request. Required for
+  # auth-protected backends (Bearer tokens, X-Scope-OrgID multi-tenancy, etc.).
+  # Values are rendered into the pod spec; use prometheusHeadersFromEnv for
+  # secrets.
+  # Example:
+  #   prometheusHeaders:
+  #     X-Scope-OrgID: "my-org"
+  prometheusHeaders: {}
+  # HTTP headers sourced from environment variables at Radar startup. Use with
+  # env[].valueFrom.secretKeyRef to keep tokens out of container args and pod
+  # specs.
+  # Example:
+  #   prometheusHeadersFromEnv:
+  #     Authorization: PROMETHEUS_TOKEN
+  #   env:
+  #     - name: PROMETHEUS_TOKEN
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: prometheus-auth
+  #           key: token
+  prometheusHeadersFromEnv: {}
+
+# Argo CD integration (GitOps deep diff)
+# Provisions the Argo CD API connection declaratively so it survives pod
+# restarts and needs no interactive Settings paste — the right shape for
+# in-cluster / Cloud deployments. Powers the full Git-rendered desired-vs-live
+# diff on GitOps Application pages. Leave token/existingSecret empty to configure
+# it interactively in Settings instead (note: that pick is stored under
+# /home/nonroot and is lost on restart unless persistence is enabled).
+#
+# Setting a token here makes the integration environment-managed: read-only in
+# the Settings UI, never written to disk. Mint a token with
+# `argocd account generate-token --account radar` (a read-only account is enough).
+argocd:
+  # Source the token from an existing Secret (recommended — the token never
+  # lands in the Helm release values or `helm get values` output). The Secret
+  # must contain a key matching existingSecretKey.
+  existingSecret: ""
+  existingSecretKey: "token"
+  # Inline token (rendered into the Deployment via RADAR_ARGOCD_TOKEN). Convenient
+  # for dev, but it lands in the Helm release state and shell history — prefer
+  # existingSecret in production. For file-based rotation, mount your own Secret
+  # volume and set RADAR_ARGOCD_TOKEN_FILE via `extraVolumes`/`env` instead.
+  token: ""
+  # Explicit argocd-server URL. Leave blank to auto-discover the argocd-server in
+  # this cluster (the common in-cluster case). Set it to pin the endpoint when
+  # discovery is ambiguous or the server is out-of-cluster.
+  url: ""
+  # Skip TLS verification (self-signed argocd-server). Leave false unless the
+  # server presents a cert Radar can't validate — it exposes the token to
+  # interception on the path to argocd-server.
+  insecureTls: false
+
+# Persistence for SQLite timeline storage
+# Required when timeline.storage is "sqlite" (readOnlyRootFilesystem prevents local writes)
+persistence:
+  enabled: false
+  # storageClassName: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Additional environment variables
+env: []
+#  - name: DEBUG
+#    value: "true"
+
+# Init containers to run before the main container
+initContainers: []
+#  - name: init-myservice
+#    image: busybox:1.36
+#    command: ['sh', '-c', 'echo init']
+
+# Additional volumes to add to the pod
+extraVolumes: []
+#  - name: my-config
+#    configMap:
+#      name: my-configmap
+
+# Additional volume mounts for the main container
+extraVolumeMounts: []
+#  - name: my-config
+#    mountPath: /etc/my-config
+#    readOnly: true
+
+# Liveness and readiness probes
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+

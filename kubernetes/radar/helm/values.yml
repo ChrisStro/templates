@@ -1,0 +1,99 @@
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: radar.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: radar-tls
+  #    hosts:
+  #      - radar.example.com
+
+httpRoute:
+  enabled: false
+  apiVersion: gateway.networking.k8s.io/v1
+  annotations: {}
+  labels: {}
+  parentRefs: []
+  hostnames: []
+  # Optional request timeout for chart-generated default rule. Empty means
+  # Gateway deployment default applies. Set 0s to explicitly disable timeout.
+  defaultTimeout: ""
+  # When empty, chart emits a default / Prefix rule to Radar Service.
+  # Non-empty rules replace default and pass through unchanged.
+  rules: []
+
+# Authentication and RBAC configuration
+auth:
+  # Authentication mode: "none" (default), "proxy", or "oidc"
+  mode: none
+  # HMAC secret for session cookies (auto-generated if empty)
+  secret: ""
+  # Use an existing secret for the auth HMAC key
+  existingSecret: ""
+  existingSecretKey: "auth-secret"
+  # Session cookie TTL (sliding — extends on activity, idle sessions expire after this duration)
+  cookieTTL: "4h"
+  # Proxy mode settings
+  proxy:
+    userHeader: "X-Forwarded-User"
+    groupsHeader: "X-Forwarded-Groups"
+    # URL the logout button redirects to, to tear down the upstream proxy
+    # session (e.g. oauth2-proxy's "/oauth2/sign_out"). The proxy must actually
+    # invalidate the session at this URL — Radar only clears its own cookie
+    # (Basic Auth has no logout). Empty = clear Radar's cookie only.
+    logoutURL: ""
+  # OIDC mode settings
+  oidc:
+    issuerURL: ""
+    # Optional internal issuer base URL used by the Radar pod for discovery and
+    # derived server-side token/userinfo/JWKS endpoints. Tokens are still
+    # validated against issuerURL, and browser redirects stay browser-facing.
+    internalIssuerURL: ""
+    # Optional endpoint overrides. Use these when browser-facing and server-side
+    # OIDC URLs cannot be derived from issuerURL/internalIssuerURL.
+    authorizationURL: ""
+    tokenURL: ""
+    userInfoURL: ""
+    jwksURL: ""
+    clientID: ""
+    clientSecret: ""
+    # Use an existing K8s Secret for the OIDC client secret (avoids storing in Helm values).
+    # The Secret must contain a key matching clientSecretKey below.
+    existingSecret: ""
+    # Key within the existingSecret that holds the client secret value
+    clientSecretKey: "client-secret"
+    redirectURL: ""
+    groupsClaim: "groups"
+    # OAuth2 scopes requested at authorization. Defaults to
+    # ["openid", "profile", "email", "groups"] inside the binary when empty.
+    # Override if your IdP rejects "groups" (e.g., Google — drop it) or you
+    # need extras like "offline_access".
+    scopes: []
+    # URL to redirect after OIDC provider logout (must be registered with IdP)
+    postLogoutRedirectURL: ""
+    # Prefix for OIDC username/groups to match kube-apiserver --oidc-username-prefix / --oidc-groups-prefix
+    usernamePrefix: ""
+    groupsPrefix: ""
+    # Path to CA certificate file for OIDC provider TLS (e.g., /etc/radar/oidc-ca.crt)
+    caCert: ""
+    # Skip TLS verification for OIDC provider (insecure, dev/test only)
+    insecureSkipVerify: false
+    # Enable OIDC Back-Channel Logout endpoint. When enabled, the IdP can POST
+    # a signed logout_token to /auth/backchannel-logout to revoke sessions.
+    # Single-replica only — revocations are stored in memory and lost on pod restart.
+    backchannelLogout: false
+    # Enable PKCE (S256) for the OIDC authorization-code flow (opt-in). Default off —
+    # existing deployments are unaffected. Enable only if your IdP supports PKCE and
+    # you want the extra protection against authorization-code interception.
+    enablePKCE: false
+
+# MCP (Model Context Protocol) server for AI tools
+mcp:
+  # Set to false to disable the MCP server (useful when deployed behind authentication)
+  enabled: false
