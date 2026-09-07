@@ -1,0 +1,33 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  open-webui:
+    <<: *default
+    image: ghcr.io/open-webui/open-webui
+    networks:
+      - proxy_network
+    env_file:
+      - .env
+    volumes:
+      - open-webui:/app/backend/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.open-webui.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.open-webui.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.open-webui.loadbalancer.server.port=8080"
+
+volumes:
+  open-webui:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
