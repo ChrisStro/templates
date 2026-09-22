@@ -1,0 +1,25 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  bentopdf:
+    <<: *default
+    image: ghcr.io/alam00000/bentopdf-simple:latest
+    container_name: bentopdf
+    networks:
+      - proxy_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bentopdf.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.bentopdf.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.bentopdf.loadbalancer.server.port=8080"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
