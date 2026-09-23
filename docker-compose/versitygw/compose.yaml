@@ -1,0 +1,60 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  versitygw:
+    <<: *default
+    image: ghcr.io/versity/versitygw:latest
+    networks:
+      - proxy_network
+    environment:
+      ROOT_ACCESS_KEY: $AWS_ACCESS_KEY_ID
+      ROOT_SECRET_KEY: $AWS_SECRET_KEY
+      VGW_WEBSITE_DOMAIN: $VGW_HOSTNAME
+      VGW_WEBSITE_PORT: 443
+      VGW_PORT: ":7070"
+      VGW_IAM_DIR: /data/iam
+      VGW_VERSIONING_DIR: /data/versioning
+      VGW_BACKEND: posix
+      VGW_BACKEND_ARGS: /data/s3
+      VGW_ADMIN_PORT: ":7071"
+      VGW_WEBUI_PORT: ":8080"      
+      VGW_WEBUI_GATEWAYS: "https://$VGW_HOSTNAME"
+      #VGW_WEBUI_ADMIN_GATEWAYS: "https://adm$VGW_HOSTNAME"
+      VGW_WEBUI_ADMIN_GATEWAYS: "http://versitygw:7071"
+    volumes:
+      - ${LOCAL_S3_PATH:-data}:/data/s3
+      - ${LOCAL_VER_PATH:-versioning}:/data/versioning
+      - ${LOCAL_IAM_PATH:-iam}:/data/iam
+    labels:
+      - "traefik.enable=true"
+      # S3 Endpoint
+      - "traefik.http.services.versitygw.loadbalancer.server.port=7070"
+      - "traefik.http.routers.versitygw.service=versitygw"
+      - "traefik.http.routers.versitygw.rule=Host(`$VGW_HOSTNAME`)"
+      - "traefik.http.routers.versitygw.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      # Admin Endpoint
+      #- "traefik.http.services.versitygw-admin.loadbalancer.server.port=7071"
+      #- "traefik.http.routers.versitygw-admin.service=versitygw-admin"
+      #- "traefik.http.routers.versitygw-admin.rule=Host(`adm$VGW_HOSTNAME`)"
+      #- "traefik.http.routers.versitygw-admin.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      # WebUI
+      - "traefik.http.services.versitygw-ui.loadbalancer.server.port=8080"
+      - "traefik.http.routers.versitygw-ui.service=versitygw-ui"
+      - "traefik.http.routers.versitygw-ui.rule=Host(`ui$VGW_HOSTNAME`)"
+      - "traefik.http.routers.versitygw-ui.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+
+volumes:
+  data:
+  iam:
+  versioning: 
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
