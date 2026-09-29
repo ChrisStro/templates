@@ -3,8 +3,11 @@ services:
     image: uroni/urbackup-server:latest
     container_name: urbackup
     restart: unless-stopped
-    # ports:
-    #     - 55414:55414
+    ports:
+      # Internet/WAN Client Port (Muss im Router freigegeben werden, falls externe Clients sichern)
+      - "55415:55415"
+      # UDP Port für Auto-Discovery von Clients im lokalen Netzwerk (LAN)
+      - "35623:35623/udp"
     # network_mode: "host"
     networks:
       - proxy_network

@@ -1,0 +1,60 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  kopia:
+    <<: *default
+    image: kopia/kopia:latest    
+    container_name: Kopia
+    networks:
+      - proxy_network
+    #ports:
+    #  - 51515:51515    
+    command:
+      - server
+      - start
+      - --disable-csrf-token-checks
+      - --insecure
+      - --address=0.0.0.0:51515
+      - --server-username=$LOGIN_USERNAME
+      - --server-password=$LOGIN_PASSWORD
+    env_file:
+      - .env
+    environment:
+      # Set repository password
+      KOPIA_PASSWORD: "$REPO_PASSWORD"
+      USER: "$REPO_USERNAME"
+    volumes:      
+      - config:/app/config
+      - cache:/app/cache
+      - logs:/app/logs
+      # Mount local folders to snapshot
+      - data:/data:ro      
+      - repository:/repository      
+      - tmp:/tmp
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.kopia.tls=true"
+      - "traefik.http.routers.kopia.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.kopia.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.kopia.loadbalancer.server.port=51515"
+
+volumes:
+  config:
+  data:
+  cache:
+  logs:
+  repository:
+  tmp:
+
+networks:
+  backend:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
