@@ -1,0 +1,29 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  opentunnel:
+    <<: *default
+    image: 'ghcr.io/akoenig/opentunnel:latest'
+    container_name: opentunnel
+    networks:
+      - proxy_network
+    command: relay --public-url https://$PUBLIC_HOSTNAME
+    ports:
+      - '8080:8080'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.opentunnel.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.opentunnel.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.opentunnel.service=opentunnel"
+      - "traefik.http.services.opentunnel.loadbalancer.server.port=8080"
+ 
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

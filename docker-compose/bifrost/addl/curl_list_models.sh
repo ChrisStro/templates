@@ -1,0 +1,1 @@
+curl https://$PUBLIC_HOSTNAME/v1/models -H "Authorization: Bearer $VIR_KEY" | jq .[][].id?
