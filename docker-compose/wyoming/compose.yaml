@@ -22,7 +22,7 @@ services:
       - 'whisper-data:/data'
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wyoming-whisper.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.wyoming-whisper.rule=Host(`whisper-$PUBLIC_HOSTNAME`)"
       - "traefik.http.routers.wyoming-whisper.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.wyoming-whisper.loadbalancer.server.port=10300"
 
@@ -40,7 +40,7 @@ services:
         - 'piper-data:/data'
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wyoming-piper.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.wyoming-piper.rule=Host(`piper-$PUBLIC_HOSTNAME`)"
       - "traefik.http.routers.wyoming-piper.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.wyoming-piper.loadbalancer.server.port=10200"
 
