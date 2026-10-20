@@ -1,0 +1,54 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  # Text2Speech
+  whisper:
+    <<: *default    
+    image: rhasspy/wyoming-whisper
+    container_name: wyoming-whisper
+    networks:
+      - proxy_network
+    ports:
+      - '10300:10300'
+    environment:
+      - OMP_NUM_THREADS=16
+    volumes:
+      - 'whisper-data:/data'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wyoming-whisper.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.wyoming-whisper.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.wyoming-whisper.loadbalancer.server.port=10300"
+
+
+  piper:
+    <<: *default
+    image: rhasspy/wyoming-piper
+    container_name: wyoming-piper
+    networks:
+      - proxy_network
+    ports:
+        - '10200:10200'
+    command: --voice de_DE-thorsten-high --length-scale 1.1
+    volumes:
+        - 'piper-data:/data'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wyoming-piper.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.wyoming-piper.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.wyoming-piper.loadbalancer.server.port=10200"
+
+volumes:
+  whisper-data:    
+  piper-data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
