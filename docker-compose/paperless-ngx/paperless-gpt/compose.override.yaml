@@ -1,0 +1,42 @@
+services:
+  paperless-gpt:
+    image: icereed/paperless-gpt:latest
+    restart: unless-stopped
+    networks:
+      - backend
+    depends_on:
+      webserver:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${PAPERLESS_GPT_PORT:-8080}:8080"
+    environment:
+      PAPERLESS_BASE_URL: http://webserver:8000
+      PAPERLESS_PUBLIC_URL: https://${PUBLIC_HOSTNAME}
+      PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN:?Set PAPERLESS_API_TOKEN in paperless-gpt/.env}
+      LLM_PROVIDER: openai
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+      LLM_LANGUAGE: ${LLM_LANGUAGE:-German}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in paperless-gpt/.env}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OCR_PROVIDER: llm
+      VISION_LLM_PROVIDER: openai
+      VISION_LLM_MODEL: ${VISION_LLM_MODEL:-gpt-4o}
+      OCR_PROCESS_MODE: image
+      OCR_LIMIT_PAGES: ${OCR_LIMIT_PAGES:-5}
+      PDF_UPLOAD: "false"
+      PDF_REPLACE: "false"
+      MANUAL_TAG: paperless-gpt
+      AUTO_TAG: paperless-gpt-auto
+      AUTO_OCR_TAG: paperless-gpt-ocr-auto
+      LISTEN_INTERFACE: ":8080"
+    volumes:
+      - paperless_gpt_prompts:/app/prompts
+      - paperless_gpt_config:/app/config
+      - paperless_gpt_db:/app/db
+    labels:
+      - "traefik.enable=false"
+
+volumes:
+  paperless_gpt_prompts:
+  paperless_gpt_config:
+  paperless_gpt_db:
