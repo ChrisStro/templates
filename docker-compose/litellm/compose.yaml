@@ -9,7 +9,7 @@ x-default: &default
 services:
   litellm:
     <<: *default
-    image: ghcr.io/berriai/litellm:${LITELLM_IMAGE_TAG:-v1.106.3}
+    image: ghcr.io/berriai/litellm:${LITELLM_IMAGE_TAG:-v1.106.4}
     container_name: litellm
     networks:
       - backend
@@ -31,7 +31,12 @@ services:
       # credentials in the database. Both are mandatory and must never be changed afterwards.
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY in .env}
       - LITELLM_SALT_KEY=${LITELLM_SALT_KEY:?set LITELLM_SALT_KEY in .env}
+      # Use the model price map bundled with the pinned image instead of fetching it from GitHub on
+      # every start: faster cold start, no egress needed. Pricing then only updates with the image.
+      - LITELLM_LOCAL_MODEL_COST_MAP=${LITELLM_LOCAL_MODEL_COST_MAP:-True}
     healthcheck:
+      # The image is a Chainguard Wolfi base without curl or wget, so probe with its own Python.
+      # A curl/wget based test would leave the container permanently unhealthy.
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')\" || exit 1"]
       interval: 30s
       timeout: 10s

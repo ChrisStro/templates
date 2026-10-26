@@ -18,8 +18,9 @@ are added in the UI instead of in a config file (`STORE_MODEL_IN_DB=True`).
    - `LITELLM_MASTER_KEY` — admin credential for the API and the Admin UI password.
    - `LITELLM_SALT_KEY` — encrypts the provider credentials stored in Postgres.
 
-   Generate the two keys with `openssl rand -hex 32`, prefix them with `sk-` if you like. Compose
-   refuses to start while any of the three is empty. Special characters in `POSTGRES_PASSWORD` have to
+   Generate the two keys as `sk-$(openssl rand -hex 32)` — upstream documents the `sk-` prefix, and
+   the proxy refuses to start with an empty or a publicly known key. Compose refuses to start while
+   any of the three is empty. Special characters in `POSTGRES_PASSWORD` have to
    be URL-encoded, because the password is part of `DATABASE_URL`.
 
    **`LITELLM_SALT_KEY` is a one-time decision.** It has no in-place rotation: once models or
@@ -76,6 +77,9 @@ match a `model_name` deployed on the gateway.
 
 - No port is published; the only entry point is Traefik on `$PROXY_NETWORK`. Postgres stays on the
   internal `backend` network.
+- `LITELLM_LOCAL_MODEL_COST_MAP=True` (default here) makes the proxy use the model price map that
+  ships with the pinned image instead of fetching it from GitHub at every start — faster cold start,
+  no egress needed, at the cost of pricing updates arriving only with an image upgrade.
 - Pin the image with `LITELLM_IMAGE_TAG` in `.env`. `latest` is the rolling stable pointer upstream
   allows; a content tag keeps upgrades reviewable. The `main-stable` tag LiteLLM used to document is
   deprecated and being retired.
