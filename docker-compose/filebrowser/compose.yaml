@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   filebrowser:
     image: hurlenko/filebrowser
@@ -19,6 +17,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=$PROXY_NETWORK"
       - "traefik.http.routers.filebrowser.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.filebrowser.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"      
       - "traefik.http.routers.filebrowser.tls=true"
 
 volumes:

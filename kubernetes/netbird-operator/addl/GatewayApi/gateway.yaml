@@ -2,11 +2,11 @@
 apiVersion: netbird.io/v1alpha1
 kind: NetworkRouter
 metadata:
-  name: netbird-proxy-pub
+  name: k8s
   namespace: netbird
 spec:
   dnsZoneRef:
-    name: k8s.company.internal
+    name: k8s.cluster.local # must exist in netbird DNS zones
   workloadOverride:
     replicas: 1
 
@@ -20,7 +20,18 @@ spec:
   gatewayClassName: netbird-public
   listeners:
   - protocol: gateway.netbird.io/NetworkRouter
-    name: netbird-proxy-pub
+    name: k8s
     port: 1
 
-
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: private
+  namespace: netbird
+spec:
+  gatewayClassName: netbird-private
+  listeners:
+  - protocol: gateway.netbird.io/NetworkRouter
+    name: k8s
+    port: 1

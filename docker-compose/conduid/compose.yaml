@@ -1,0 +1,82 @@
+x-default: &default
+  restart: 'always'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  conduit:
+    <<: *default
+    image: matrixconduit/matrix-conduit:latest
+    networks:
+      - proxy_network
+    volumes:
+      - conduit_data:/var/lib/matrix-conduit/
+    configs:
+      - source: conduit_config
+        target: /etc/conduit.toml
+    environment:
+      CONDUIT_CONFIG: /etc/conduit.toml
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.conduit.rule=Host(`matrix.$DOMAINNAME`)"
+      - "traefik.http.routers.conduit.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.conduit.loadbalancer.server.port=6167"
+      # Matrix Federation (Port 8448 Support)
+      #- "traefik.http.routers.conduit-fed.rule=Host(`$DOMAINNAME`)"
+      #- "traefik.http.routers.conduit-fed.entrypoints=matrix-fed"
+      #- "traefik.http.routers.conduit-fed.tls=true"
+
+  element:
+    <<: *default
+    image: vectorim/element-web:latest
+    networks:
+      - proxy_network
+    configs:
+      - source: element_config
+        target: /app/config.json
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.element-web.rule=Host(`element.$DOMAINNAME`)"
+      - "traefik.http.routers.element-web.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.element-web.loadbalancer.server.port=80"
+
+configs:
+  conduit_config:
+    content: |
+      [global]
+      server_name = "matrix.${DOMAINNAME}"
+      database_backend = "rocksdb"
+      database_path = "/var/lib/matrix-conduit/"
+      port = 6167
+      max_request_size = 20_000_000
+      allow_registration = true
+      address = "0.0.0.0"
+
+  element_config:
+    content: |
+      {
+        "default_server_config": {
+            "m.homeserver": {
+                "base_url": "https://matrix.$DOMAINNAME",
+                "server_name": "matrix.$DOMAINNAME"
+            }
+        },
+        "brand": "Private Matrix",
+        "integrations_ui_url": "https://scalar.vector.im/",
+        "integrations_rest_url": "https://scalar.vector.im/api",
+        "show_labs_settings": true,
+        "registration_shared_secret": false,
+        "default_federation_methods": ["trusted_servers"],
+        "pwa": true
+      }
+
+volumes:
+  conduit_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

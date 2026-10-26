@@ -1,5 +1,5 @@
 # Diese Zeile einfach selbst hinzufügen:
-#managementURL: "https://notrust.cc-hgn.de"
+#managementURL: "https://your.custom.management.url"
 
 operator:
   replicaCount: 1

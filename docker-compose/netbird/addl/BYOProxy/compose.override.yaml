@@ -1,0 +1,42 @@
+services:
+  reverse-proxy:
+    container_name: netbird-proxy
+    depends_on:
+      crowdsec:
+        condition: service_healthy
+    networks:
+      - netbird
+    env_file:
+      - proxy.env
+    volumes:
+      - /opt/stacks/netbird-proxy/wildcard_certs:/wildcard_certs
+
+  crowdsec:
+    image: crowdsecurity/crowdsec:v1.7.7
+    container_name: netbird-crowdsec
+    restart: unless-stopped
+    networks:
+      - netbird
+    environment:
+      COLLECTIONS: crowdsecurity/linux
+    volumes:
+      - ./crowdsec:/etc/crowdsec
+      - crowdsec_db:/var/lib/crowdsec/data
+    healthcheck:
+      test: ["CMD", "cscli", "lapi", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    labels:
+      - traefik.enable=false
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "500m"
+        max-file: "2"
+
+networks:
+  netbird:
+
+volumes:
+  crowdsec_db:
