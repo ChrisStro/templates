@@ -5,4 +5,9 @@ An enterprise-class, open-source distributed monitoring solution that’s design
 [GitHub Page](https://github.com/zabbix/zabbix)
 
 ## Notes
-- Default Username: Admin/zabbix
+- Default Username: `Admin/zabbix`
+
+## Optional overrides
+
+- [Zabbix MCP server](mcp/README.md): adds an MCP endpoint for AI agents via
+  `zabbix/zabbix-mcp-server`.
