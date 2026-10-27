@@ -1,0 +1,24 @@
+services:
+  zabbix-mcp:
+    image: zabbix/zabbix-mcp-server:latest
+    restart: unless-stopped
+    depends_on:
+      - zabbix-web
+    networks:
+      - default
+    ports:
+      - "127.0.0.1:${ZBX_MCP_PORT:-8443}:${ZBX_LISTENPORT:-8443}"
+    environment:
+      ZBX_FRONTEND_URL: ${ZBX_FRONTEND_URL:-http://zabbix-web:8080/api_jsonrpc.php}
+      ZBX_ALLOWEDIP: ${ZBX_ALLOWEDIP:-127.0.0.1,::1}
+      ZBX_LISTENIP: ${ZBX_LISTENIP:-0.0.0.0}
+      ZBX_LISTENPORT: ${ZBX_LISTENPORT:-8443}
+      ZBX_DEBUGLEVEL: ${ZBX_DEBUGLEVEL:-3}
+      ZBX_TIMEOUT: ${ZBX_TIMEOUT:-10}
+      ZBX_IGNOREURLCERTERRORS: ${ZBX_IGNOREURLCERTERRORS:-false}
+      ZBX_MAX_RESPONSE_SIZE: ${ZBX_MAX_RESPONSE_SIZE:-64K}
+      ZBX_TOOL_PREFIX: ${ZBX_TOOL_PREFIX:-}
+    volumes:
+      - ${CERTS_HOSTPATH:-zabbix_certs}:/var/lib/zabbix/enc:ro
+    labels:
+      - "traefik.enable=false"
