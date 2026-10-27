@@ -1,40 +1,36 @@
-# Zabbix MCP override
+# Zabbix MCP compose
 
-This override adds the official
+This compose file runs the official
 [`zabbix/zabbix-mcp-server`](https://hub.docker.com/r/zabbix/zabbix-mcp-server)
-container to the existing Zabbix stack.
-
-The base stack remains unchanged unless you explicitly load this override file.
+as a standalone stack under `addl/mcp`.
 
 ## Configuration
 
 Run all commands from `docker-compose/zabbix`.
 
-1. Configure the base `.env` as usual (hostname, proxy network, database password).
-2. Edit `addl/mcp/.env`:
-   - `ZBX_FRONTEND_URL`: Zabbix API URL ending in `api_jsonrpc.php`.
-   - `ZBX_ALLOWEDIP`: allowed source IPs/CIDRs for MCP clients.
-   - `ZBX_MCP_PORT`: local host loopback port (default `8443`).
-   - `ZBX_MCP_PUBLIC_HOSTNAME`: hostname used by Traefik for the MCP router.
-   - optional runtime tuning (`ZBX_TIMEOUT`, `ZBX_DEBUGLEVEL`, ...).
+1. Configure `PROXY_NETWORK` in the base `.env` to match the external Traefik network.
+2. Set `ZBX_MCP_PUBLIC_HOSTNAME` in `addl/mcp/.env` for the Traefik router.
 
-The checked-in `addl/mcp/.env` is a template. Keep environment-specific values local.
+Other MCP settings use the defaults in `compose.yaml` and are deliberately not duplicated in
+`.env`. Override them through the environment when invoking Compose, or through a separate local
+env file. For example, set `ZBX_FRONTEND_URL` to a reachable Zabbix API URL ending in
+`api_jsonrpc.php` if the default URL is not applicable.
 
 ## Start
 
-Load both env files and both compose files explicitly:
+Run from `docker-compose/zabbix` and load the base + MCP env files:
 
 ```sh
 docker compose --env-file .env --env-file addl/mcp/.env \
-  -f compose.yaml -f addl/mcp/compose.override.yaml config --quiet
+  -f addl/mcp/compose.yaml config --quiet
 
 docker compose --env-file .env --env-file addl/mcp/.env \
-  -f compose.yaml -f addl/mcp/compose.override.yaml up -d
+  -f addl/mcp/compose.yaml up -d
 ```
 
-The MCP endpoint is available on:
+The MCP service does not publish a host port. Access it through the Traefik router:
 
-- `http://127.0.0.1:${ZBX_MCP_PORT:-8443}/mcp`
+- `https://${ZBX_MCP_PUBLIC_HOSTNAME}/mcp`
 
 Each MCP request must include a valid Zabbix API token as bearer token:
 
@@ -44,10 +40,13 @@ Authorization: Bearer <ZABBIX_API_TOKEN>
 
 ## Security notes
 
-- The override always includes Traefik labels (`traefik.enable=true`) and joins `proxy_network`.
+- The compose file includes Traefik labels (`traefik.enable=true`) and joins `proxy_network`.
 - Set `ZBX_MCP_PUBLIC_HOSTNAME` to a dedicated hostname and secure it in Traefik as needed.
-- The override still publishes the MCP port only on IPv4 loopback (`127.0.0.1`) by default.
-- Keep `ZBX_ALLOWEDIP` restricted to trusted client networks.
+- No host port is published; the MCP service is reachable through its Traefik router on `proxy_network`.
+- `ZBX_ALLOWEDIP` defaults to `0.0.0.0/0` so Traefik can reach the MCP service. Keep the container
+  off directly exposed networks; if direct access is required, override this with trusted source CIDRs.
 - `ZBX_IGNOREURLCERTERRORS=true` is only suitable for testing.
 
-For remote usage, prefer HTTPS via Traefik or tunnel the local port over SSH.
+Use HTTPS via Traefik for client access.
+
+`ZBX_FRONTEND_URL` must point to a reachable Zabbix API endpoint (for example your base Zabbix stack URL ending in `api_jsonrpc.php`).

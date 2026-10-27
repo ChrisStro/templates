@@ -19,6 +19,10 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    configs:
+      - source: config-yaml
+        target: /app/config.yaml
+    command: [ "--config", "/app/config.yaml", "--port", "4000" ]
     environment:
       # Prisma connection string. Special characters in POSTGRES_PASSWORD must be URL-encoded.
       - DATABASE_URL=postgresql://litellm:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/litellm
@@ -70,6 +74,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+configs:
+  config-yaml:
+    content: |
+      general_settings:
+        disable_env_credential_login: ${INIT_USER_DISABLED:-false}
 
 volumes:
   litellm_db:

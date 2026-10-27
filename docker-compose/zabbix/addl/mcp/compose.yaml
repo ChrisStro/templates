@@ -1,17 +1,22 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
 services:
   zabbix-mcp:
-    image: zabbix/zabbix-mcp-server:latest
-    restart: unless-stopped
-    depends_on:
-      - zabbix-web
+    <<: *default
+    image: zabbix/zabbix-mcp-server:trunk-alpine
     networks:
       - default
       - proxy_network
-    ports:
-      - "127.0.0.1:${ZBX_MCP_PORT:-8443}:${ZBX_LISTENPORT:-8443}"
     environment:
       ZBX_FRONTEND_URL: ${ZBX_FRONTEND_URL:-http://zabbix-web:8080/api_jsonrpc.php}
-      ZBX_ALLOWEDIP: ${ZBX_ALLOWEDIP:-127.0.0.1,::1}
+      # Traefik connects from another container address, so allow all by default.
+      ZBX_ALLOWEDIP: ${ZBX_ALLOWEDIP:-0.0.0.0/0}
       ZBX_LISTENIP: ${ZBX_LISTENIP:-0.0.0.0}
       ZBX_LISTENPORT: ${ZBX_LISTENPORT:-8443}
       ZBX_DEBUGLEVEL: ${ZBX_DEBUGLEVEL:-3}
@@ -24,6 +29,14 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=$PROXY_NETWORK"
-      - "traefik.http.routers.zabbix-mcp.rule=Host(`${ZBX_MCP_PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.zabbix-mcp.rule=Host(`${PUBLIC_HOSTNAME}`)"
       - "traefik.http.routers.zabbix-mcp.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.services.zabbix-mcp.loadbalancer.server.port=${ZBX_LISTENPORT:-8443}"
+
+volumes:
+  zabbix_certs:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
