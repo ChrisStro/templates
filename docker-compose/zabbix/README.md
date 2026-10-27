@@ -9,5 +9,5 @@ An enterprise-class, open-source distributed monitoring solution that’s design
 
 ## Optional overrides
 
-- [Zabbix MCP server](mcp/README.md): adds an MCP endpoint for AI agents via
-  `zabbix/zabbix-mcp-server`.
+- [Zabbix MCP server](addl/mcp/README.md): adds an MCP endpoint for AI agents via
+  `zabbix/zabbix-mcp-server`. Includes Traefik labels by default.

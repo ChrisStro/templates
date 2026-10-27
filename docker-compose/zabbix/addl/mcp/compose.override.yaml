@@ -6,6 +6,7 @@ services:
       - zabbix-web
     networks:
       - default
+      - proxy_network
     ports:
       - "127.0.0.1:${ZBX_MCP_PORT:-8443}:${ZBX_LISTENPORT:-8443}"
     environment:
@@ -21,4 +22,8 @@ services:
     volumes:
       - ${CERTS_HOSTPATH:-zabbix_certs}:/var/lib/zabbix/enc:ro
     labels:
-      - "traefik.enable=false"
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.zabbix-mcp.rule=Host(`${ZBX_MCP_PUBLIC_HOSTNAME}`)"
+      - "traefik.http.routers.zabbix-mcp.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.zabbix-mcp.loadbalancer.server.port=${ZBX_LISTENPORT:-8443}"
