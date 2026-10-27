@@ -1,0 +1,41 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+services:
+  hindsight:
+    <<: *default
+    image: ghcr.io/vectorize-io/hindsight:${HINDSIGHT_IMAGE_TAG:-latest}
+    shm_size: '1g'
+    networks:
+      - proxy_network
+    environment:
+      - HINDSIGHT_API_LLM_PROVIDER=${HINDSIGHT_API_LLM_PROVIDER:-openai}
+      - HINDSIGHT_API_LLM_BASE_URL=${HINDSIGHT_API_LLM_BASE_URL:-https://api.openai.com}
+      - HINDSIGHT_API_LLM_API_KEY=${HINDSIGHT_API_LLM_API_KEY:?set HINDSIGHT_API_LLM_API_KEY in .env}
+      - HINDSIGHT_API_WORKER_ID=${HINDSIGHT_API_WORKER_ID:-hindsight-prod}
+    volumes:
+      - hindsight_data:/home/hindsight/.pg0
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.hindsight-api.rule=Host(`$HINDSIGHT_API_PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.hindsight-api.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.hindsight-api.service=hindsight-api"
+      - "traefik.http.services.hindsight-api.loadbalancer.server.port=8888"
+      - "traefik.http.routers.hindsight-ui.rule=Host(`$HINDSIGHT_UI_PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.hindsight-ui.entrypoints=${UI_TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.routers.hindsight-ui.service=hindsight-ui"
+      - "traefik.http.services.hindsight-ui.loadbalancer.server.port=9999"
+
+volumes:
+  hindsight_data:
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true
