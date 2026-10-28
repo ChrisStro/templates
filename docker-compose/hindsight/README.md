@@ -33,7 +33,3 @@ docker compose up -d
    - API: `https://${HINDSIGHT_API_PUBLIC_HOSTNAME}`
    - UI: `https://${HINDSIGHT_UI_PUBLIC_HOSTNAME}`
 
-## Migration note
-
-This change does not automatically migrate existing data from the old `.pg0` volume.
-If you already ran the previous stack, migrate data manually before switching in production.
