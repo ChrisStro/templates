@@ -14,7 +14,12 @@ services:
     networks:
       - proxy_network
     environment:
+      - HINDSIGHT_API_TENANT_EXTENSION=hindsight_api.extensions.builtin.tenant:ApiKeyTenantExtension
+      - HINDSIGHT_API_TENANT_API_KEY=${HINDSIGHT_API_KEY:-CHANGEME_ME}
+      - HINDSIGHT_CP_DATAPLANE_API_KEY=${HINDSIGHT_API_KEY:-CHANGEME_ME}
+      - HINDSIGHT_CP_ACCESS_KEY=${HINDSIGHT_ACCESS_KEY:-CHANGEME_ME}
       - HINDSIGHT_API_LLM_PROVIDER=${HINDSIGHT_API_LLM_PROVIDER:-openai}
+      - HINDSIGHT_API_LLM_MODEL=${HINDSIGHT_API_LLM_MODEL:-gpt-6-luna}
       - HINDSIGHT_API_LLM_BASE_URL=${HINDSIGHT_API_LLM_BASE_URL:-https://api.openai.com}
       - HINDSIGHT_API_LLM_API_KEY=${HINDSIGHT_API_LLM_API_KEY:?set HINDSIGHT_API_LLM_API_KEY in .env}
       - HINDSIGHT_API_WORKER_ID=${HINDSIGHT_API_WORKER_ID:-hindsight-prod}
@@ -31,6 +36,7 @@ services:
       - "traefik.http.routers.hindsight-ui.entrypoints=${UI_TRAEFIK_ENTRYPOINTS:-websecure}"
       - "traefik.http.routers.hindsight-ui.service=hindsight-ui"
       - "traefik.http.services.hindsight-ui.loadbalancer.server.port=9999"
+
 
 volumes:
   hindsight_data:
