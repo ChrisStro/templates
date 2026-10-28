@@ -7,12 +7,27 @@ x-default: &default
       max-file: '2'
 
 services:
+  db:
+    <<: *default
+    image: pgvector/pgvector:pg${HINDSIGHT_DB_VERSION:-18}
+    networks:
+      - hindsight_network
+    environment:
+      - POSTGRES_USER=${HINDSIGHT_DB_USER:-hindsight_user}
+      - POSTGRES_PASSWORD=${HINDSIGHT_DB_PASSWORD:?set HINDSIGHT_DB_PASSWORD in .env}
+      - POSTGRES_DB=${HINDSIGHT_DB_NAME:-hindsight_db}
+    volumes:
+      - hindsight_pg_data:/var/lib/postgresql/${HINDSIGHT_DB_VERSION:-18}/docker
+
   hindsight:
     <<: *default
     image: ghcr.io/vectorize-io/hindsight:${HINDSIGHT_IMAGE_TAG:-latest}
     shm_size: '1g'
+    depends_on:
+      - db
     networks:
       - proxy_network
+      - hindsight_network
     environment:
       - HINDSIGHT_API_TENANT_EXTENSION=hindsight_api.extensions.builtin.tenant:ApiKeyTenantExtension
       - HINDSIGHT_API_TENANT_API_KEY=${HINDSIGHT_API_KEY:-CHANGEME_ME}
@@ -23,8 +38,7 @@ services:
       - HINDSIGHT_API_LLM_BASE_URL=${HINDSIGHT_API_LLM_BASE_URL:-https://api.openai.com}
       - HINDSIGHT_API_LLM_API_KEY=${HINDSIGHT_API_LLM_API_KEY:?set HINDSIGHT_API_LLM_API_KEY in .env}
       - HINDSIGHT_API_WORKER_ID=${HINDSIGHT_API_WORKER_ID:-hindsight-prod}
-    volumes:
-      - hindsight_data:/home/hindsight/.pg0
+      - HINDSIGHT_API_DATABASE_URL=postgresql://${HINDSIGHT_DB_USER:-hindsight_user}:${HINDSIGHT_DB_PASSWORD:?set HINDSIGHT_DB_PASSWORD in .env}@db:5432/${HINDSIGHT_DB_NAME:-hindsight_db}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=$PROXY_NETWORK"
@@ -37,11 +51,11 @@ services:
       - "traefik.http.routers.hindsight-ui.service=hindsight-ui"
       - "traefik.http.services.hindsight-ui.loadbalancer.server.port=9999"
 
-
 volumes:
-  hindsight_data:
+  hindsight_pg_data:
 
 networks:
   proxy_network:
     name: $PROXY_NETWORK
     external: true
+  hindsight_network:
