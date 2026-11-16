@@ -1,0 +1,105 @@
+volumes:
+  sandbox-tls:
+
+configs:
+  searxng-settings:
+    content: |
+      use_default_settings: true
+      search:
+        formats:
+          - html
+          - json
+
+services:
+  n8n:
+    depends_on:
+      sandbox-api:
+        condition: service_healthy
+    environment:
+      - N8N_SANDBOX_SERVICE_URL=${N8N_SANDBOX_SERVICE_URL:-http://sandbox-api:8080}
+      - N8N_SANDBOX_SERVICE_API_KEY=${N8N_SANDBOX_SERVICE_API_KEY:-change-me-api-key}
+      - N8N_INSTANCE_AI_SEARXNG_URL=${N8N_INSTANCE_AI_SEARXNG_URL:-http://searxng:8080}
+
+  sandbox-certs:
+    image: ghcr.io/n8n-io/n8n-sandbox-service-api:${N8N_SANDBOX_VERSION:-latest}
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        bootstrap-mtls.sh --out-dir /tls --api-san sandbox-api
+        --control-san-prefix sandbox-runner --world-readable &&
+        chown -R sandbox-api:sandbox-api /tls/api && chmod -R a+rX /tls
+    environment:
+      - NUM_RUNNERS=1
+    volumes:
+      - sandbox-tls:/tls
+    networks:
+      - backend
+
+  sandbox-api:
+    image: ghcr.io/n8n-io/n8n-sandbox-service-api:${N8N_SANDBOX_VERSION:-latest}
+    restart: always
+    depends_on:
+      sandbox-certs:
+        condition: service_completed_successfully
+    environment:
+      - SANDBOX_API_KEYS=${SANDBOX_API_KEYS:-change-me-api-key}
+      - SANDBOX_API_RUNNER_REGISTRATION_TOKEN=${SANDBOX_RUNNER_REGISTRATION_TOKEN:-change-me-registration-token}
+      - SANDBOX_API_GRPC_TLS_CERT_FILE=/tls/api/grpc-server.crt
+      - SANDBOX_API_GRPC_TLS_KEY_FILE=/tls/api/grpc-server.key
+      - SANDBOX_API_GRPC_TLS_CLIENT_CA_FILE=/tls/api/ca.crt
+      - SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_CA_FILE=/tls/api/ca.crt
+      - SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_CERT_FILE=/tls/api/control-grpc-api-client.crt
+      - SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_KEY_FILE=/tls/api/control-grpc-api-client.key
+      - SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_SERVER_NAME=sandbox-runner-1
+    volumes:
+      - sandbox-tls:/tls:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+  sandbox-runner-1:
+    image: ghcr.io/n8n-io/n8n-sandbox-service-runner-dind:${N8N_SANDBOX_VERSION:-latest}
+    restart: always
+    privileged: true
+    depends_on:
+      sandbox-api:
+        condition: service_healthy
+    environment:
+      - SANDBOX_RUNNER_API_KEYS=${SANDBOX_RUNNER_API_KEYS:-change-me-runner-key}
+      - SANDBOX_RUNNER_REGISTRATION_TOKEN=${SANDBOX_RUNNER_REGISTRATION_TOKEN:-change-me-registration-token}
+      - SANDBOX_RUNNER_API_GRPC_ADDR=sandbox-api:9090
+      - SANDBOX_RUNNER_HTTP_BASE_URL=https://sandbox-runner-1:8080
+      - SANDBOX_RUNNER_CONTROL_GRPC_LISTEN_ADDR=:9091
+      - SANDBOX_RUNNER_CONTROL_GRPC_ADVERTISE_ADDR=sandbox-runner-1:9091
+      - SANDBOX_RUNNER_ID=runner-1
+      - SANDBOX_RUNNER_DOCKER_SANDBOX_IMAGE=ghcr.io/n8n-io/n8n-sandbox-service-sandbox:${N8N_SANDBOX_VERSION:-latest}
+      - DOCKER_IGNORE_BR_NETFILTER_ERROR=1
+      - SANDBOX_RUNNER_REGISTRATION_GRPC_CA_FILE=/tls/runner/ca.crt
+      - SANDBOX_RUNNER_REGISTRATION_GRPC_CERT_FILE=/tls/runner/grpc-client.crt
+      - SANDBOX_RUNNER_REGISTRATION_GRPC_KEY_FILE=/tls/runner/grpc-client.key
+      - SANDBOX_RUNNER_REGISTRATION_GRPC_SERVER_NAME=sandbox-api
+      - SANDBOX_RUNNER_CONTROL_GRPC_TLS_CERT_FILE=/tls/runner/control-grpc-server.crt
+      - SANDBOX_RUNNER_CONTROL_GRPC_TLS_KEY_FILE=/tls/runner/control-grpc-server.key
+      - SANDBOX_RUNNER_CONTROL_GRPC_TLS_CLIENT_CA_FILE=/tls/runner/ca.crt
+    volumes:
+      - sandbox-tls:/tls:ro
+    networks:
+      - backend
+
+  searxng:
+    image: ghcr.io/searxng/searxng:latest
+    restart: always
+    environment:
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-change-me-searxng-secret}
+    configs:
+      - source: searxng-settings
+        target: /etc/searxng/settings.yml
+    networks:
+      - backend

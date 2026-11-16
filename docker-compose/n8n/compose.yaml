@@ -53,11 +53,11 @@ services:
      - N8N_BLOCK_ENV_ACCESS_IN_NODE=${N8N_BLOCK_ENV_ACCESS_IN_NODE:-false}
      - N8N_EMAIL_MODE=smtp
      - N8N_SMTP_HOST=$N8N_SMTP_HOST
-     - N8N_SMTP_PORT=$N8N_SMTP_HOST
-     - N8N_SMTP_USER=N8N_SMTP_USER$
+     - N8N_SMTP_PORT=$N8N_SMTP_PORT
+     - N8N_SMTP_USER=$N8N_SMTP_USER
      - N8N_SMTP_PASS=$N8N_SMTP_PASS
      - N8N_SMTP_SSL=true
-     - WEBHOOK_URL=https://$PUBLIC_HOSTNAME
+     - WEBHOOK_URL=https://${WEBHOOK_HOSTNAME:-$PUBLIC_HOSTNAME}
      - GENERIC_TIMEZONE=Europe/Berlin
      - TZ=Europe/Amsterdam
     depends_on:
@@ -66,7 +66,7 @@ services:
     labels:
      - "traefik.enable=true"
      - "traefik.docker.network=$PROXY_NETWORK"
-     - "traefik.http.routers.n8n.rule=Host(`$PUBLIC_HOSTNAME`)"
+     - "traefik.http.routers.n8n.rule=Host(`$PUBLIC_HOSTNAME`) || Host(`${WEBHOOK_HOSTNAME:-$PUBLIC_HOSTNAME}`)"
      - "traefik.http.routers.n8n.tls=true"
      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
      - "traefik.http.routers.n8n.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
