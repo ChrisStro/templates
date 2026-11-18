@@ -1,0 +1,23 @@
+# Override to reach the BunkerWeb web UI through the existing Traefik proxy.
+# Usage: docker compose -f compose.yaml -f addl/compose.traefik.yaml up -d
+#
+# Note: set the UI server name in the setup wizard to $PUBLIC_HOSTNAME,
+# or browse the UI directly via the Traefik router defined below.
+
+services:
+  bw-ui:
+    networks:
+      - bw-universe
+      - bw-db
+      - proxy_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=$PROXY_NETWORK"
+      - "traefik.http.routers.bunkerweb-ui.rule=Host(`$PUBLIC_HOSTNAME`)"
+      - "traefik.http.routers.bunkerweb-ui.entrypoints=${TRAEFIK_ENTRYPOINTS:-websecure}"
+      - "traefik.http.services.bunkerweb-ui.loadbalancer.server.port=7000"
+
+networks:
+  proxy_network:
+    name: $PROXY_NETWORK
+    external: true

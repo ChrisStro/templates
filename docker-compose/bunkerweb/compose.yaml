@@ -1,0 +1,151 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
+# Shared BunkerWeb settings (Docker autoconf integration)
+x-bw-env: &bw-env
+  AUTOCONF_MODE: "yes"
+  API_WHITELIST_IP: "127.0.0.0/8 10.20.30.0/24"
+  API_TOKEN: ${API_TOKEN:-}
+  # nginx DNS resolver; 127.0.0.11 is Docker's embedded DNS.
+  # Under podman set DNS_RESOLVERS to the network gateway IP (e.g. 10.20.30.1).
+  DNS_RESOLVERS: ${DNS_RESOLVERS:-127.0.0.11}
+  DATABASE_URI: "mariadb+pymysql://bunkerweb:$MYSQL_PASSWORD@bw-db:3306/db"
+
+services:
+  bunkerweb:
+    <<: *default
+    image: bunkerity/bunkerweb:${BW_VERSION}
+    container_name: bunkerweb
+    ports:
+      - "80:8080/tcp"
+      - "443:8443/tcp"
+      - "443:8443/udp" # QUIC / HTTP3
+    labels:
+      - "bunkerweb.INSTANCE=yes"
+    environment:
+      <<: *bw-env
+    networks:
+      - bw-universe
+      - bw-services
+    depends_on:
+      - bw-db
+
+  bw-scheduler:
+    <<: *default
+    image: bunkerity/bunkerweb-scheduler:${BW_VERSION}
+    container_name: bw-scheduler
+    depends_on:
+      - bunkerweb
+      - bw-db
+      - bw-ui
+      - redis
+    environment:
+      <<: *bw-env
+      BUNKERWEB_INSTANCES: "" # instances are auto-detected in autoconf mode
+      SERVER_NAME: "" # filled by the setup wizard / service labels
+      MULTISITE: "yes"
+      UI_HOST: "http://bw-ui:7000"
+      USE_REDIS: "yes"
+      REDIS_HOST: "redis"
+    volumes:
+      - bw-storage:/data # cache, backups and configuration state
+    networks:
+      - bw-universe
+      - bw-db
+
+  bw-autoconf:
+    <<: *default
+    image: bunkerity/bunkerweb-autoconf:${BW_VERSION}
+    container_name: bw-autoconf
+    depends_on:
+      - bw-docker
+      - bw-db
+    environment:
+      <<: *bw-env
+      DOCKER_HOST: "tcp://bw-docker:2375"
+    networks:
+      - bw-universe
+      - bw-docker
+      - bw-db
+
+  bw-docker:
+    <<: *default
+    image: tecnativa/docker-socket-proxy:nightly
+    container_name: bw-docker
+    volumes:
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    environment:
+      CONTAINERS: "1"
+      LOG_LEVEL: "warning"
+    networks:
+      - bw-docker
+
+  bw-ui:
+    <<: *default
+    image: bunkerity/bunkerweb-ui:${BW_VERSION}
+    container_name: bw-ui
+    depends_on:
+      - bw-db
+    environment:
+      <<: *bw-env
+    volumes:
+      - bw-ui-data:/data # UI secrets (Flask secret, TOTP / Biscuit keys)
+    networks:
+      - bw-universe
+      - bw-db
+
+  bw-db:
+    <<: *default
+    image: mariadb:11
+    container_name: bw-db
+    # large max packet size avoids issues with big queries
+    command: --max-allowed-packet=67108864
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: "db"
+      MYSQL_USER: "bunkerweb"
+      MYSQL_PASSWORD: $MYSQL_PASSWORD
+    volumes:
+      - bw-data:/var/lib/mysql
+    networks:
+      - bw-db
+
+  redis:
+    <<: *default
+    image: redis:8-alpine
+    container_name: bw-redis
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy volatile-lru
+      --save 60 1000
+      --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - bw-universe
+
+volumes:
+  bw-data:
+  bw-storage:
+  bw-ui-data:
+  redis-data:
+
+networks:
+  bw-universe:
+    name: bw-universe
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.20.30.0/24 # must match API_WHITELIST_IP
+  bw-services:
+    name: bw-services
+  bw-docker:
+    name: bw-docker
+  bw-db:
+    name: bw-db
