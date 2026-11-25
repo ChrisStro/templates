@@ -9,7 +9,7 @@ x-default: &default
 services:
   zerobyte:
     <<: *default
-    image: ghcr.io/nicotsx/zerobyte:latest
+    image: ghcr.io/nicotsx/zerobyte:v0.44.2
     container_name: zerobyte
     networks:
       - proxy_network
