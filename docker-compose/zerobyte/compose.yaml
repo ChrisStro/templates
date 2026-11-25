@@ -27,6 +27,7 @@ services:
       - BASE_URL=https://$PUBLIC_HOSTNAME
       - TRUSTED_ORIGINS=${TRUSTED_ORIGINS:-https://$PUBLIC_HOSTNAME}
       - TRUST_PROXY=${TRUST_PROXY:-true}
+      - ENABLE_REMOTE_AGENTS=${ENABLE_REMOTE_AGENTS:-true}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - APP_SECRET=$APP_SECRET
     volumes:
