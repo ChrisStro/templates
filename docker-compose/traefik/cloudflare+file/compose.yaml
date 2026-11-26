@@ -68,7 +68,7 @@ services:
       - "--entrypoints.websecure-internal.http.tls.options=default" # from fileprovider
       # enable dashboard
       - "--api=true"
-      - "--api.dashboard=$DASHBOARDENABLED"
+      - "--api.dashboard=true"
       - "--api.insecure=false"
     security_opt:
       - no-new-privileges:true
@@ -81,12 +81,6 @@ services:
       - traefik_certs:/cloudflare
       - ./dynamic:/etc/traefik/dynamic:ro
       - ./own_certs:/etc/certs
-    labels:
-      # https part
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik-secure.service=api@internal"
-      - "traefik.http.routers.traefik-secure.entrypoints=${DASHBOARD_ENTRYPOINTS:-websecure-internal}"
-      - "traefik.http.routers.traefik-secure.rule=Host(`t.$DOMAINNAME`)"
 
 volumes:
   traefik_certs:

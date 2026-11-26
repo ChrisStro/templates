@@ -1,7 +1,12 @@
 tls:
-  # certificates:
-  #   - certFile: /etc/certs/cert.pem
-  #     keyFile: /etc/certs/key.pem
+#  stores:
+#    default:
+#      defaultCertificate:
+#        certFile: /etc/certs/cert.pem
+#        keyFile: /etc/certs/key.pem
+#  certificates:
+#    - certFile: /etc/certs/cert.pem
+#      keyFile: /etc/certs/key.pem
   options:
     default:
       minVersion: VersionTLS12
@@ -16,11 +21,3 @@ tls:
       - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
     tlsv13only:
       minVersion: VersionTLS13
-
-http:
-  middlewares:
-    hsts-header:
-      headers:
-        stsSeconds: 63072000
-        forceSTSHeader: true
-        stsIncludeSubdomains: true

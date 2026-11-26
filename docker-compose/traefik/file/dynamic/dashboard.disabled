@@ -1,0 +1,7 @@
+http:
+  routers:
+    traefik-dashboard:
+      rule: "Host(`t.public.mydomain.net`)"
+      service: api@internal
+      entryPoints: ["websecure"]
+      tls: {} # Explizites TLS (nutzt Default Cert)
